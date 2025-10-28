@@ -1,0 +1,5 @@
+Flask
+Flask-Cors
+Flask-SQLAlchemy
+firebase-admin
+python-dotenv
