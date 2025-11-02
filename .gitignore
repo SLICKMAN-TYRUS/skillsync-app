@@ -1,8 +1,59 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.db
-*.sqlite3
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
 instance/
+
+# Testing & coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node / React Native / Expo
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+.expo/
+.expo-shared/
+.metro-cache/
+.parcel-cache/
+
+# Android/iOS build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+ios/build/
+ios/DerivedData/
+ios/Pods/
+
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.python-version
