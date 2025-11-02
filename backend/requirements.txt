@@ -3,3 +3,8 @@ Flask-Cors
 Flask-SQLAlchemy
 firebase-admin
 python-dotenv
+psycopg2-binary
+pytest
+pytest-flask
+gunicorn
+Flask-Migrate
