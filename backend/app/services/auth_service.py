@@ -15,17 +15,28 @@ if os.path.exists(cred_path):
     firebase_available = True
 
 
+def _check_test_tokens_enabled() -> bool:
+    from flask import current_app
+    try:
+        return current_app.config.get('ALLOW_TEST_TOKENS', True)
+    except RuntimeError:
+        flask_env = os.getenv('FLASK_ENV', 'development')
+        allow_test = os.getenv('ALLOW_TEST_TOKENS', str(flask_env != 'production'))
+        return allow_test.lower() in ('true', '1', 'yes')
+
+
 def verify_token(id_token: Optional[str]):
     if not id_token:
         return None
     
-    # Local development helper: accept tokens formatted as "test:<uid>" or "test:<uid>:<role>"
-    # Check test tokens first to support local development even when Firebase is configured
     if id_token.startswith("test:"):
+        if not _check_test_tokens_enabled():
+            return None
+        
         parts = id_token.split(":")
         if len(parts) >= 2:
             uid = parts[1]
-            role = parts[2] if len(parts) >= 3 else "student"  # Default to student
+            role = parts[2] if len(parts) >= 3 else "student"
             return {
                 "uid": uid, 
                 "email": f"{uid}@example.com",
@@ -36,7 +47,6 @@ def verify_token(id_token: Optional[str]):
     if firebase_available:
         try:
             decoded = auth.verify_id_token(id_token)
-            # Extract role from custom claims if available
             custom_claims = decoded.get("custom_claims", {})
             if "role" in custom_claims:
                 decoded["role"] = custom_claims["role"]

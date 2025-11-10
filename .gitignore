@@ -58,13 +58,7 @@ Thumbs.db
 .vscode/
 .python-version
 
-AGENTS.md
-CLAUDE.md
-IMPLEMENTATION_SUMMARY.md
-TEST_RESULTS.md
-TODO.md
 api_test_commands.sh
-run
 
 # Firebase credentials
 firebase_credentials.json

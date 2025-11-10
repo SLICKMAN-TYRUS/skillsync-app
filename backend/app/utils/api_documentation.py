@@ -204,7 +204,14 @@ class APIDocumentationGenerator:
                 "type": "http",
                 "scheme": "bearer",
                 "bearerFormat": "JWT",
-                "description": "JWT token obtained from authentication endpoint"
+                "description": (
+                    "Firebase JWT token or test token for authentication. "
+                    "\n\n**Production**: Use Firebase ID tokens from Firebase Authentication. "
+                    "\n\n**Development/Testing**: Use test tokens in the format 'test:<uid>:<role>' "
+                    "(e.g., 'test:student1:student', 'test:provider1:provider', 'test:admin1:admin'). "
+                    "Test tokens are automatically disabled in production. "
+                    "\n\nSee /docs/TEST_TOKENS.md for complete documentation."
+                )
             }
         }
     
@@ -283,7 +290,13 @@ class APIDocumentationGenerator:
                 "post": {
                     "tags": ["Authentication"],
                     "summary": "Verify Firebase token",
-                    "description": "Verify Firebase authentication token. For local testing, use tokens like 'test:uid:role'",
+                    "description": (
+                        "Verify Firebase authentication token or test token. "
+                        "\n\n**Development/Testing**: Use test tokens in format 'test:<uid>:<role>' "
+                        "(e.g., 'test:student1:student', 'test:provider1:provider'). "
+                        "Test tokens are automatically disabled in production. "
+                        "\n\n**Production**: Use Firebase ID tokens from Firebase Authentication."
+                    ),
                     "security": [],
                     "requestBody": {
                         "required": True,
@@ -292,7 +305,11 @@ class APIDocumentationGenerator:
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "token": {"type": "string", "description": "Firebase ID token or test token"}
+                                        "token": {
+                                            "type": "string", 
+                                            "description": "Firebase ID token or test token (format: test:<uid>:<role>)",
+                                            "example": "test:student1:student"
+                                        }
                                     },
                                     "required": ["token"]
                                 }

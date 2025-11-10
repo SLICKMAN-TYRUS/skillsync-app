@@ -22,91 +22,92 @@ from app.services.admin_service import (
 from app.services.exceptions import ValidationError, AuthorizationError, NotFoundError
 
 
+@pytest.fixture
+def admin_sample_data(db_session):
+    """Create sample data for analytics testing"""
+    # Create users
+    admin = User(
+        uid="admin_123",
+        name="Admin User",
+        email="admin@test.com",
+        role="admin",
+        average_rating=0.0
+    )
+    provider = User(
+        uid="provider_456", 
+        name="Provider User",
+        email="provider@test.com",
+        role="provider",
+        average_rating=4.5
+    )
+    student = User(
+        uid="student_789",
+        name="Student User", 
+        email="student@test.com",
+        role="student",
+        average_rating=4.2
+    )
+    
+    db_session.add_all([admin, provider, student])
+    db_session.commit()
+    
+    # Create gigs
+    gigs = []
+    for i in range(5):
+        gig = Gig(
+            title=f"Test Gig {i}",
+            description=f"Description for gig {i}",
+            budget=100.0 + (i * 50),
+            provider_id=provider.id,
+            status="open" if i < 3 else "completed",
+            approval_status="approved",
+            category="tutoring" if i % 2 == 0 else "design"
+        )
+        gigs.append(gig)
+        db_session.add(gig)
+    
+    db_session.commit()
+    
+    # Create applications
+    applications = []
+    for i, gig in enumerate(gigs[:3]):  # Applications for first 3 gigs
+        app = Application(
+            gig_id=gig.id,
+            student_id=student.id,
+            status="pending" if i < 2 else "accepted",
+            notes=f"Application for gig {i}"
+        )
+        applications.append(app)
+        db_session.add(app)
+    
+    db_session.commit()
+    
+    # Create ratings
+    for gig in gigs[3:]:  # Ratings for completed gigs
+        rating = Rating(
+            rater_id=provider.id,
+            ratee_id=student.id,
+            gig_id=gig.id,
+            score=5,
+            comment="Excellent work!"
+        )
+        db_session.add(rating)
+    
+    db_session.commit()
+    
+    return {
+        "admin": admin,
+        "provider": provider,
+        "student": student,
+        "gigs": gigs,
+        "applications": applications
+    }
+
+
 class TestSystemAnalytics:
     """Test basic system analytics functionality"""
     
-    @pytest.fixture
-    def sample_data(self, app, db_session):
-        """Create sample data for analytics testing"""
-        # Create users
-        admin = User(
-            uid="admin_123",
-            name="Admin User",
-            email="admin@test.com",
-            role="admin",
-            average_rating=0.0
-        )
-        provider = User(
-            uid="provider_456", 
-            name="Provider User",
-            email="provider@test.com",
-            role="provider",
-            average_rating=4.5
-        )
-        student = User(
-            uid="student_789",
-            name="Student User", 
-            email="student@test.com",
-            role="student",
-            average_rating=4.2
-        )
-        
-        db_session.add_all([admin, provider, student])
-        db_session.commit()
-        
-        # Create gigs
-        gigs = []
-        for i in range(5):
-            gig = Gig(
-                title=f"Test Gig {i}",
-                description=f"Description for gig {i}",
-                budget=100.0 + (i * 50),
-                provider_id=provider.id,
-                status="open" if i < 3 else "completed",
-                approval_status="approved",
-                category="tutoring" if i % 2 == 0 else "design"
-            )
-            gigs.append(gig)
-            db_session.add(gig)
-        
-        db_session.commit()
-        
-        # Create applications
-        applications = []
-        for i, gig in enumerate(gigs[:3]):  # Applications for first 3 gigs
-            app = Application(
-                gig_id=gig.id,
-                student_id=student.id,
-                status="pending" if i < 2 else "accepted",
-                notes=f"Application for gig {i}"
-            )
-            applications.append(app)
-            db_session.add(app)
-        
-        db_session.commit()
-        
-        # Create ratings
-        for gig in gigs[3:]:  # Ratings for completed gigs
-            rating = Rating(
-                rater_id=provider.id,
-                ratee_id=student.id,
-                gig_id=gig.id,
-                score=5,
-                comment="Excellent work!"
-            )
-            db_session.add(rating)
-        
-        db_session.commit()
-        
-        return {
-            "admin": admin,
-            "provider": provider,
-            "student": student,
-            "gigs": gigs,
-            "applications": applications
-        }
-    
-    def test_get_system_analytics(self, sample_data):
+    def test_get_system_analytics(self, admin_sample_data):
         """Test basic system analytics retrieval"""
         analytics = get_system_analytics()
         
@@ -129,7 +130,7 @@ class TestSystemAnalytics:
         assert analytics["total_admins"] >= 1
         assert analytics["total_applications"] >= 3
     
-    def test_get_gig_analytics(self, sample_data):
+    def test_get_gig_analytics(self, admin_sample_data):
         """Test gig-specific analytics"""
         analytics = get_gig_analytics()
         
@@ -155,7 +156,7 @@ class TestSystemAnalytics:
             assert "category" in analytics["top_categories"][0]
             assert "count" in analytics["top_categories"][0]
     
-    def test_get_user_analytics(self, sample_data):
+    def test_get_user_analytics(self, admin_sample_data):
         """Test user analytics"""
         analytics = get_user_analytics()
         
