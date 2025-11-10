@@ -1,3 +1,29 @@
+DROP TABLE IF EXISTS push_notifications CASCADE;
+
+DROP TABLE IF EXISTS email_queue CASCADE;
+
+DROP TABLE IF EXISTS notification_preferences CASCADE;
+
+DROP TABLE IF EXISTS student_skills CASCADE;
+
+DROP TABLE IF EXISTS skills CASCADE;
+
+DROP TABLE IF EXISTS audit_logs CASCADE;
+
+DROP TABLE IF EXISTS feedback CASCADE;
+
+DROP TABLE IF EXISTS saved_gigs CASCADE;
+
+DROP TABLE IF EXISTS notifications CASCADE;
+
+DROP TABLE IF EXISTS ratings CASCADE;
+
+DROP TABLE IF EXISTS applications CASCADE;
+
+DROP TABLE IF EXISTS gigs CASCADE;
+
+DROP TABLE IF EXISTS users CASCADE;
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     uid VARCHAR(128) UNIQUE NOT NULL,
@@ -7,6 +33,7 @@ CREATE TABLE users (
     profile_photo VARCHAR(255),
     location VARCHAR(255),
     bio TEXT,
+    availability_status VARCHAR(50) DEFAULT 'available',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     average_rating DECIMAL(3, 2) DEFAULT 0.0
 );
@@ -15,10 +42,10 @@ CREATE TABLE gigs (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    budget NUMERIC(10, 2),
+    budget DECIMAL(10, 2),
     category VARCHAR(100),
     location VARCHAR(255),
-    provider_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     deadline DATE,
     status VARCHAR(50) DEFAULT 'open',
     approval_status VARCHAR(50) DEFAULT 'pending',
@@ -28,8 +55,8 @@ CREATE TABLE gigs (
 
 CREATE TABLE applications (
     id SERIAL PRIMARY KEY,
-    gig_id INTEGER NOT NULL REFERENCES gigs(id) ON DELETE CASCADE,
-    student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    gig_id INTEGER NOT NULL REFERENCES gigs (id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     status VARCHAR(50) DEFAULT 'pending',
     notes TEXT,
     applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -39,38 +66,43 @@ CREATE TABLE applications (
 
 CREATE TABLE ratings (
     id SERIAL PRIMARY KEY,
-    rater_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    ratee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    gig_id INTEGER NOT NULL REFERENCES gigs(id) ON DELETE CASCADE,
-    score INTEGER CHECK (score BETWEEN 1 AND 5),
+    rater_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    ratee_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    gig_id INTEGER NOT NULL REFERENCES gigs (id) ON DELETE CASCADE,
+    score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (rater_id, gig_id)
+    is_flagged BOOLEAN DEFAULT FALSE,
+    flag_reason VARCHAR(255),
+    moderation_status VARCHAR(50) DEFAULT 'pending',
+    moderated_at TIMESTAMP,
+    moderated_by INTEGER REFERENCES users (id) ON DELETE SET NULL,
+    UNIQUE (rater_id, ratee_id, gig_id)
 );
 
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     read BOOLEAN DEFAULT FALSE,
-    related_gig_id INTEGER REFERENCES gigs(id) ON DELETE SET NULL,
-    related_application_id INTEGER REFERENCES applications(id) ON DELETE SET NULL,
+    related_gig_id INTEGER REFERENCES gigs (id) ON DELETE SET NULL,
+    related_application_id INTEGER REFERENCES applications (id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE saved_gigs (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    gig_id INTEGER NOT NULL REFERENCES gigs(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    gig_id INTEGER NOT NULL REFERENCES gigs (id) ON DELETE CASCADE,
     saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_id, gig_id)
 );
 
 CREATE TABLE feedback (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
     category VARCHAR(100) NOT NULL,
     message TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'pending',
@@ -79,10 +111,106 @@ CREATE TABLE feedback (
 
 CREATE TABLE audit_logs (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
     action VARCHAR(100) NOT NULL,
     resource_type VARCHAR(50) NOT NULL,
     resource_id INTEGER NOT NULL,
     details JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE skills (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    category VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE student_skills (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    skill_id INTEGER NOT NULL REFERENCES skills (id) ON DELETE CASCADE,
+    proficiency_level VARCHAR(20) DEFAULT 'beginner',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (student_id, skill_id)
+);
+
+CREATE TABLE notification_preferences (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    notification_type VARCHAR(50) NOT NULL,
+    email_enabled BOOLEAN DEFAULT TRUE,
+    push_enabled BOOLEAN DEFAULT TRUE,
+    in_app_enabled BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, notification_type)
+);
+
+CREATE TABLE email_queue (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    email_address VARCHAR(255) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    template VARCHAR(100),
+    template_data JSONB,
+    status VARCHAR(20) DEFAULT 'pending',
+    attempts INTEGER DEFAULT 0,
+    last_attempt TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP
+);
+
+CREATE TABLE push_notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    device_token VARCHAR(255),
+    platform VARCHAR(20),
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    data JSONB,
+    status VARCHAR(20) DEFAULT 'pending',
+    attempts INTEGER DEFAULT 0,
+    last_attempt TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP
+);
+
+CREATE INDEX idx_users_email ON users (email);
+
+CREATE INDEX idx_users_uid ON users (uid);
+
+CREATE INDEX idx_users_role ON users (role);
+
+CREATE INDEX idx_gigs_provider_id ON gigs (provider_id);
+
+CREATE INDEX idx_gigs_status ON gigs (status);
+
+CREATE INDEX idx_gigs_approval_status ON gigs (approval_status);
+
+CREATE INDEX idx_gigs_category ON gigs (category);
+
+CREATE INDEX idx_applications_gig_id ON applications (gig_id);
+
+CREATE INDEX idx_applications_student_id ON applications (student_id);
+
+CREATE INDEX idx_applications_status ON applications (status);
+
+CREATE INDEX idx_ratings_rater_id ON ratings (rater_id);
+
+CREATE INDEX idx_ratings_ratee_id ON ratings (ratee_id);
+
+CREATE INDEX idx_ratings_gig_id ON ratings (gig_id);
+
+CREATE INDEX idx_notifications_user_id ON notifications (user_id);
+
+CREATE INDEX idx_notifications_read ON notifications (read);
+
+CREATE INDEX idx_saved_gigs_user_id ON saved_gigs (user_id);
+
+CREATE INDEX idx_saved_gigs_gig_id ON saved_gigs (gig_id);
+
+CREATE INDEX idx_student_skills_student_id ON student_skills (student_id);
+
+CREATE INDEX idx_student_skills_skill_id ON student_skills (skill_id);

@@ -79,3 +79,47 @@ def update_user_average_rating(user_id: int) -> User:
     user.average_rating = round(float(avg_score), 2) if avg_score else 0.0
     db.session.commit()
     return user
+
+
+def create_user_from_token(decoded_token: Dict) -> User:
+    """Create a user from Firebase token data with auto-role assignment"""
+    uid = decoded_token.get("uid")
+    email = decoded_token.get("email", f"{uid}@example.com")
+    name = decoded_token.get("name") or decoded_token.get("display_name") or f"User {uid}"
+    role = decoded_token.get("role", "student")  # Default to student
+    
+    if not uid:
+        raise ValidationError("Token missing uid claim")
+    
+    # Check if user already exists
+    existing_user = get_user_by_uid(uid)
+    if existing_user:
+        return existing_user
+    
+    # Validate role
+    if role not in {"student", "provider", "admin"}:
+        role = "student"  # Fallback to student for invalid roles
+    
+    user = User(uid=uid, name=name, email=email, role=role.lower())
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+def update_user_role(user_uid: str, new_role: str, admin_id: int) -> User:
+    """Update user role (admin only function)"""
+    user = get_user_by_uid(user_uid)
+    if not user:
+        raise NotFoundError(f"User with uid {user_uid} not found")
+    
+    if new_role not in {"student", "provider", "admin"}:
+        raise ValidationError("Role must be student, provider, or admin")
+    
+    old_role = user.role
+    user.role = new_role.lower()
+    db.session.commit()
+    
+    # TODO: Log the role change for audit purposes
+    # create_audit_log(admin_id, "role_change", f"Changed {user.name} role from {old_role} to {new_role}")
+    
+    return user

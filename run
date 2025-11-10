@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# SkillSync Backend Runner
+
+set -e
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$PROJECT_ROOT/venv"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+
+echo "SkillSync Backend"
+
+# First time setup detection
+if [ ! -d "$VENV_DIR" ]; then
+    echo "🔧 First run detected - setting up..."
+    
+    # Create virtual environment
+    python3 -m venv "$VENV_DIR"
+    
+    # Activate and install dependencies
+    source "$VENV_DIR/bin/activate"
+    pip install --upgrade pip > /dev/null 2>&1
+    pip install -r "$BACKEND_DIR/requirements.txt"
+    
+    # Create .env if missing
+    if [ ! -f "$PROJECT_ROOT/.env" ]; then
+        cat > "$PROJECT_ROOT/.env" << EOF
+SECRET_KEY=dev-secret-$(date +%s)
+DATABASE_URL=postgresql://username:password@localhost/skillsync
+FIREBASE_CREDENTIALS_PATH=path/to/firebase-service-account.json
+FLASK_ENV=development
+FLASK_DEBUG=True
+EOF
+        echo "Created basic .env file - update with your settings"
+    fi
+    
+    echo "Setup complete!"
+else
+    # Quick start
+    source "$VENV_DIR/bin/activate"
+fi
+
+# Start server
+export FLASK_APP="$BACKEND_DIR/run.py"
+export FLASK_ENV=development
+
+cd "$BACKEND_DIR"
+echo "🌟 Starting server at http://localhost:5000"
+echo "Press Ctrl+C to stop"
+python run.py

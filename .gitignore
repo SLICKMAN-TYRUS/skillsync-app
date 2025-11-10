@@ -57,3 +57,8 @@ Thumbs.db
 .idea/
 .vscode/
 .python-version
+
+api_test_commands.sh
+
+# Firebase credentials
+firebase_credentials.json

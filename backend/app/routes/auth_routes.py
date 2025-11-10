@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, g, request
 
 from ..services.auth_service import verify_token
-from ..services.exceptions import ValidationError
+from ..services.exceptions import ValidationError, AuthorizationError
 from ..services.user_service import create_user, get_user_by_uid
 from ..services.utils import require_auth
 from .serializers import user_to_dict
@@ -19,45 +19,32 @@ def verify():
     return jsonify({"error": "Invalid token"}), 401
 
 
-@auth_bp.route("/register", methods=["POST"])
-def register():
+@auth_bp.route("/set-role", methods=["POST"])
+@require_auth
+def set_role():
+    from ..services.utils import require_role
+    
+    # Only admins can change roles
+    if not g.current_user.is_role("admin"):
+        raise AuthorizationError("Only admins can change user roles")
+    
     payload = request.get_json(silent=True) or {}
-    id_token = payload.get("id_token")
-    name = payload.get("name")
-    email = payload.get("email")
-    role = payload.get("role")
-
-    decoded = verify_token(id_token)
-    if not decoded:
-        return jsonify({"error": "Invalid or missing Firebase token"}), 401
-
-    uid = decoded.get("uid")
-    if not uid:
-        raise ValidationError("Firebase token missing uid claim")
-
-    if get_user_by_uid(uid):
-        return jsonify(
-            {
-                "message": "User already registered",
-                "user": user_to_dict(get_user_by_uid(uid), include_email=True),
-            }
-        ), 200
-
-    if not all([name, email, role]):
-        raise ValidationError("name, email, and role are required")
-    if role not in {"student", "provider", "admin"}:
+    user_uid = payload.get("user_uid")
+    new_role = payload.get("role")
+    
+    if not user_uid or not new_role:
+        raise ValidationError("user_uid and role are required")
+    
+    if new_role not in {"student", "provider", "admin"}:
         raise ValidationError("Role must be student, provider, or admin")
-
-    user = create_user(uid=uid, name=name, email=email, role=role)
-    return (
-        jsonify(
-            {
-                "message": "Registration successful",
-                "user": user_to_dict(user, include_email=True),
-            }
-        ),
-        201,
-    )
+    
+    from ..services.user_service import update_user_role
+    updated_user = update_user_role(user_uid, new_role, g.current_user.id)
+    
+    return jsonify({
+        "message": f"User role updated to {new_role}",
+        "user": user_to_dict(updated_user, include_email=True)
+    }), 200
 
 
 @auth_bp.route("/me", methods=["GET"])

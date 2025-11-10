@@ -82,3 +82,55 @@ def update_application_status(application_id: int, new_status: str) -> Applicati
         application.selected_at = datetime.utcnow()
     db.session.commit()
     return application
+
+
+def withdraw_application(application_id: int, student_id: int) -> None:
+    """Allow a student to withdraw their application"""
+    application = get_application_by_id(application_id)
+    
+    if application.student_id != student_id:
+        raise AuthorizationError("You can only withdraw your own applications")
+    
+    if application.status in ("accepted", "completed"):
+        raise ValidationError("Cannot withdraw an accepted or completed application")
+    
+    if application.status == "withdrawn":
+        raise ValidationError("Application is already withdrawn")
+    
+    application.status = "withdrawn"
+    db.session.commit()
+
+
+def bulk_update_applications(gig_id: int, provider_id: int, updates: List[Dict]) -> List[Application]:
+    """Update multiple applications at once for a provider"""
+    gig = get_gig_by_id(gig_id)
+    if gig.provider_id != provider_id:
+        raise AuthorizationError("You can only update applications for your own gigs")
+    
+    updated_applications = []
+    
+    for update in updates:
+        application_id = update.get("application_id")
+        new_status = update.get("status")
+        
+        if not application_id or not new_status:
+            continue
+        
+        try:
+            application = get_application_by_id(application_id)
+            if application.gig_id != gig_id:
+                continue  # Skip applications not for this gig
+            
+            Application.validate_status(new_status)
+            application.status = new_status
+            if new_status == "accepted" and not application.selected_at:
+                application.selected_at = datetime.utcnow()
+            
+            updated_applications.append(application)
+        except (NotFoundError, ValidationError):
+            continue  # Skip invalid updates
+    
+    if updated_applications:
+        db.session.commit()
+    
+    return updated_applications

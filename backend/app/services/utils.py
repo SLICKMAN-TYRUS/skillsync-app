@@ -16,6 +16,8 @@ def _extract_bearer_token() -> str:
 def require_auth(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
+        from .user_service import create_user_from_token
+        
         token = _extract_bearer_token()
         decoded = verify_token(token)
         if not decoded:
@@ -23,9 +25,15 @@ def require_auth(func):
         uid = decoded.get("uid")
         if not uid:
             raise AuthenticationError("Token payload missing uid")
+        
         user = get_user_by_uid(uid)
         if not user:
-            raise AuthenticationError("User not found for supplied token")
+            # Auto-create user from token if doesn't exist
+            try:
+                user = create_user_from_token(decoded)
+            except Exception as e:
+                raise AuthenticationError(f"Failed to create user: {str(e)}")
+        
         g.current_user = user
         return func(*args, **kwargs)
 

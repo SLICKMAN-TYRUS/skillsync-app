@@ -13,6 +13,7 @@ class User(db.Model):
     profile_photo = db.Column(db.String(255))
     location = db.Column(db.String(255))
     bio = db.Column(db.Text)
+    availability_status = db.Column(db.String(50), default="available")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     average_rating = db.Column(db.Numeric(3, 2), default=0.0)
 
@@ -51,6 +52,10 @@ class User(db.Model):
     )
     audit_logs = db.relationship(
         "AuditLog", back_populates="user", cascade="all", lazy="dynamic"
+    )
+    skills = db.relationship(
+        "StudentSkill", back_populates="student", cascade="all, delete-orphan", lazy="dynamic",
+        foreign_keys="StudentSkill.student_id"
     )
 
     def is_role(self, *roles: str) -> bool:

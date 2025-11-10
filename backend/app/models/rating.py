@@ -18,10 +18,18 @@ class Rating(db.Model):
     score = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Moderation fields
+    is_flagged = db.Column(db.Boolean, default=False)
+    flag_reason = db.Column(db.String(255))
+    moderation_status = db.Column(db.String(50), default="pending")  # pending, approved, rejected
+    moderated_at = db.Column(db.DateTime)
+    moderated_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
 
     rater = db.relationship("User", foreign_keys=[rater_id], back_populates="ratings_given")
     ratee = db.relationship("User", foreign_keys=[ratee_id], back_populates="ratings_received")
     gig = db.relationship("Gig", back_populates="ratings")
+    moderator = db.relationship("User", foreign_keys=[moderated_by])
 
     @staticmethod
     def validate_score(score: int) -> None:

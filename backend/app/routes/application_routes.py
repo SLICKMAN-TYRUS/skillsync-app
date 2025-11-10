@@ -2,11 +2,13 @@ from flask import Blueprint, jsonify, g, request
 
 from ..services import notification_service
 from ..services.application_service import (
+    bulk_update_applications,
     create_application,
     get_application_by_id,
     get_student_applications,
     select_candidate,
     update_application_status,
+    withdraw_application,
 )
 from ..services.exceptions import AuthorizationError, ValidationError
 from ..services.gig_service import get_gig_by_id
@@ -87,3 +89,52 @@ def reject_application(application_id: int):
         updated.status,
     )
     return jsonify(application_to_dict(updated, include_student=True)), 200
+
+
+@application_bp.route("/<int:application_id>/withdraw", methods=["PATCH"])
+@require_auth
+@require_role("student")
+def withdraw_application_endpoint(application_id: int):
+    withdraw_application(application_id, g.current_user.id)
+    application = get_application_by_id(application_id)
+    notification_service.notify_application_status_change(
+        application.gig.provider_id,
+        application.gig_id,
+        application.id,
+        "withdrawn",
+    )
+    return jsonify({"message": "Application withdrawn successfully"}), 200
+
+
+@application_bp.route("/bulk-update", methods=["PATCH"])
+@require_auth
+@require_role("provider")
+def bulk_update_applications_endpoint():
+    payload = request.get_json(silent=True) or {}
+    gig_id = payload.get("gig_id")
+    updates = payload.get("updates", [])
+    
+    if not gig_id:
+        raise ValidationError("gig_id is required")
+    
+    if not updates:
+        raise ValidationError("updates list is required")
+    
+    updated_applications = bulk_update_applications(gig_id, g.current_user.id, updates)
+    
+    # Send notifications for status changes
+    for app in updated_applications:
+        notification_service.notify_application_status_change(
+            app.student_id,
+            app.gig_id,
+            app.id,
+            app.status,
+        )
+    
+    return jsonify({
+        "message": f"Updated {len(updated_applications)} applications",
+        "updated_applications": [
+            application_to_dict(app, include_student=True) 
+            for app in updated_applications
+        ]
+    }), 200
