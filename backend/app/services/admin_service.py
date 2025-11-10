@@ -363,22 +363,32 @@ def moderate_rating(rating_id: int, admin_id: int, action: str, note: str = ""):
     if action not in {"approve", "remove", "warn_user"}:
         raise ValidationError("Unsupported moderation action")
 
+    # Update moderation fields
+    rating.moderated_by = admin_id
+    rating.moderated_at = datetime.utcnow()
+    
     response = {"action": action, "note": note}
     if action == "remove":
         ratee_id = rating.ratee_id
+        rating.moderation_status = "rejected"
         db.session.delete(rating)
         db.session.commit()
         update_user_average_rating(ratee_id)
         response["status"] = "removed"
     elif action == "warn_user":
+        rating.moderation_status = "flagged"
         create_notification(
             user_id=rating.rater_id,
             type="rating_warning",
             title="Rating under review",
             message=note or "Your recent rating was flagged by an administrator.",
         )
+        db.session.commit()
         response["status"] = "warning_sent"
     else:
+        rating.moderation_status = "approved"
+        rating.is_flagged = False
+        db.session.commit()
         response["status"] = "approved"
 
     _log_action(
@@ -438,4 +448,168 @@ def get_audit_logs(filters: Dict, pagination: Dict):
         "per_page": pagination_obj.per_page,
         "total": pagination_obj.total,
         "pages": pagination_obj.pages,
+    }
+
+
+def get_platform_health_metrics():
+    """Get platform health and performance metrics"""
+    from datetime import datetime, timedelta
+    
+    # Get metrics for the last 24 hours, 7 days, and 30 days
+    now = datetime.utcnow()
+    day_ago = now - timedelta(days=1)
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    
+    # User activity metrics
+    active_users_today = User.query.filter(User.last_login >= day_ago).count() if hasattr(User, 'last_login') else 0
+    new_users_today = User.query.filter(User.created_at >= day_ago).count()
+    new_users_week = User.query.filter(User.created_at >= week_ago).count()
+    
+    # Gig activity metrics
+    gigs_created_today = Gig.query.filter(Gig.created_at >= day_ago).count()
+    gigs_created_week = Gig.query.filter(Gig.created_at >= week_ago).count()
+    applications_today = Application.query.filter(Application.applied_at >= day_ago).count()
+    applications_week = Application.query.filter(Application.applied_at >= week_ago).count()
+    
+    # Rating activity
+    ratings_today = Rating.query.filter(Rating.created_at >= day_ago).count()
+    ratings_week = Rating.query.filter(Rating.created_at >= week_ago).count()
+    
+    # Success metrics
+    completed_gigs_week = Gig.query.filter(
+        and_(Gig.status == "completed", Gig.updated_at >= week_ago)
+    ).count()
+    
+    # Platform health indicators
+    pending_gigs = Gig.query.filter(Gig.approval_status == "pending").count()
+    flagged_ratings = Rating.query.filter(Rating.is_flagged == True).count() if hasattr(Rating, 'is_flagged') else 0
+    
+    return {
+        "user_metrics": {
+            "active_users_today": active_users_today,
+            "new_users_today": new_users_today,
+            "new_users_week": new_users_week,
+            "total_users": User.query.count()
+        },
+        "gig_metrics": {
+            "gigs_created_today": gigs_created_today,
+            "gigs_created_week": gigs_created_week,
+            "completed_gigs_week": completed_gigs_week,
+            "pending_approval": pending_gigs,
+            "total_gigs": Gig.query.count()
+        },
+        "engagement_metrics": {
+            "applications_today": applications_today,
+            "applications_week": applications_week,
+            "ratings_today": ratings_today,
+            "ratings_week": ratings_week,
+            "total_applications": Application.query.count(),
+            "total_ratings": Rating.query.count()
+        },
+        "moderation_metrics": {
+            "pending_gigs": pending_gigs,
+            "flagged_ratings": flagged_ratings,
+            "recent_audit_actions": AuditLog.query.filter(AuditLog.created_at >= day_ago).count()
+        }
+    }
+
+
+def get_revenue_analytics():
+    """Get revenue and transaction analytics"""
+    # This would integrate with payment systems when implemented
+    # For now, return placeholder analytics based on completed gigs
+    
+    completed_gigs = Gig.query.filter(Gig.status == "completed").all()
+    
+    if not completed_gigs:
+        return {
+            "total_revenue": 0.0,
+            "average_gig_value": 0.0,
+            "commission_earned": 0.0,
+            "transactions_count": 0,
+            "revenue_trends": []
+        }
+    
+    total_value = sum(float(gig.budget or 0) for gig in completed_gigs)
+    commission_rate = 0.05  # 5% commission
+    commission_earned = total_value * commission_rate
+    
+    return {
+        "total_revenue": round(total_value, 2),
+        "average_gig_value": round(total_value / len(completed_gigs), 2),
+        "commission_earned": round(commission_earned, 2),
+        "transactions_count": len(completed_gigs),
+        "commission_rate": commission_rate,
+        "currency": "USD"
+    }
+
+
+def get_user_engagement_analytics():
+    """Get detailed user engagement analytics"""
+    # Get user activity patterns
+    total_users = User.query.count()
+    students = User.query.filter(User.role == "student").count()
+    providers = User.query.filter(User.role == "provider").count()
+    
+    # Get application success rates
+    total_applications = Application.query.count()
+    accepted_applications = Application.query.filter(Application.status == "accepted").count()
+    
+    # Get gig completion rates
+    total_gigs = Gig.query.count()
+    completed_gigs = Gig.query.filter(Gig.status == "completed").count()
+    
+    # Get most active users
+    top_providers = db.session.query(
+        User,
+        func.count(Gig.id).label("gig_count")
+    ).join(Gig, Gig.provider_id == User.id).filter(
+        User.role == "provider"
+    ).group_by(User.id).order_by(
+        func.count(Gig.id).desc()
+    ).limit(10).all()
+    
+    top_students = db.session.query(
+        User,
+        func.count(Application.id).label("application_count")
+    ).join(Application, Application.student_id == User.id).filter(
+        User.role == "student"
+    ).group_by(User.id).order_by(
+        func.count(Application.id).desc()
+    ).limit(10).all()
+    
+    return {
+        "user_distribution": {
+            "total_users": total_users,
+            "students": students,
+            "providers": providers,
+            "student_percentage": round((students / total_users) * 100, 1) if total_users > 0 else 0,
+            "provider_percentage": round((providers / total_users) * 100, 1) if total_users > 0 else 0
+        },
+        "engagement_rates": {
+            "application_success_rate": round((accepted_applications / total_applications) * 100, 1) if total_applications > 0 else 0,
+            "gig_completion_rate": round((completed_gigs / total_gigs) * 100, 1) if total_gigs > 0 else 0,
+            "average_applications_per_gig": round(total_applications / total_gigs, 1) if total_gigs > 0 else 0
+        },
+        "top_performers": {
+            "most_active_providers": [
+                {
+                    "id": provider.id,
+                    "name": provider.name,
+                    "gig_count": gig_count,
+                    "average_rating": float(provider.average_rating or 0.0)
+                }
+                for provider, gig_count in top_providers
+            ],
+            "most_active_students": [
+                {
+                    "id": student.id,
+                    "name": student.name,
+                    "application_count": app_count,
+                    "average_rating": float(student.average_rating or 0.0)
+                }
+                for student, app_count in top_students
+            ]
+        }
     }

@@ -50,4 +50,7 @@ def create_app():
         response = {"error": "Internal server error", "status": 500}
         return jsonify(response), 500
 
+    from .utils.api_documentation import create_api_docs_routes
+    create_api_docs_routes(app)
+
     return app

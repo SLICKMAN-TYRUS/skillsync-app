@@ -80,6 +80,7 @@ def rating_to_dict(
     rating,
     include_rater: bool = False,
     include_ratee: bool = False,
+    include_moderation: bool = False,
 ) -> dict:
     data = {
         "id": rating.id,
@@ -96,4 +97,12 @@ def rating_to_dict(
         data["rater"] = user_to_dict(rating.rater, include_email=False)
     if include_ratee and getattr(rating, "ratee", None):
         data["ratee"] = user_to_dict(rating.ratee, include_email=False)
+    if include_moderation:
+        data["moderation"] = {
+            "is_flagged": getattr(rating, "is_flagged", False),
+            "flag_reason": getattr(rating, "flag_reason", None),
+            "moderation_status": getattr(rating, "moderation_status", "pending"),
+            "moderated_at": rating.moderated_at.isoformat() if getattr(rating, "moderated_at", None) else None,
+            "moderated_by": rating.moderated_by if getattr(rating, "moderated_by", None) else None,
+        }
     return data

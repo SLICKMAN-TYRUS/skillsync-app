@@ -12,6 +12,7 @@ class Application(db.Model):
         "accepted",
         "rejected",
         "completed",
+        "withdrawn",
     }
 
     id = db.Column(db.Integer, primary_key=True)

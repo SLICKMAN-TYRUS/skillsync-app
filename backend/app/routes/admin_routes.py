@@ -119,3 +119,24 @@ def audit_logs():
     }
     data = admin_service.get_audit_logs(filters, pagination)
     return jsonify(data), 200
+
+
+@admin_bp.route("/analytics/health", methods=["GET"])
+@require_auth
+@require_role("admin")
+def platform_health_metrics():
+    return jsonify(admin_service.get_platform_health_metrics()), 200
+
+
+@admin_bp.route("/analytics/revenue", methods=["GET"])
+@require_auth
+@require_role("admin")
+def revenue_analytics():
+    return jsonify(admin_service.get_revenue_analytics()), 200
+
+
+@admin_bp.route("/analytics/engagement", methods=["GET"])
+@require_auth
+@require_role("admin")
+def user_engagement_analytics():
+    return jsonify(admin_service.get_user_engagement_analytics()), 200

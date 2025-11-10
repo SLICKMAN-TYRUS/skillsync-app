@@ -7,6 +7,15 @@ from ..services.saved_gigs_service import (
     save_gig,
     unsave_gig,
 )
+from ..services.skill_service import (
+    add_student_skill,
+    get_all_skills,
+    get_student_skills,
+    remove_student_skill,
+    search_skills,
+    update_student_availability,
+    update_student_skill,
+)
 from ..services.user_service import (
     get_user_by_id,
     get_user_gig_history,
@@ -73,3 +82,76 @@ def remove_saved_gig(saved_gig_id: int):
         raise ValidationError("Saved gig not found")
     unsave_gig(g.current_user.id, saved.gig_id)
     return "", 204
+
+
+@user_bp.route("/skills", methods=["GET"])
+@require_auth
+@require_role("student")
+def get_user_skills():
+    student_skills = get_student_skills(g.current_user.id)
+    return jsonify([skill.to_dict() for skill in student_skills]), 200
+
+
+@user_bp.route("/skills", methods=["POST"])
+@require_auth
+@require_role("student")
+def add_user_skill():
+    payload = request.get_json(silent=True) or {}
+    skill_name = payload.get("skill_name")
+    proficiency_level = payload.get("proficiency_level", "beginner")
+    
+    if not skill_name:
+        raise ValidationError("skill_name is required")
+    
+    student_skill = add_student_skill(g.current_user.id, skill_name, proficiency_level)
+    return jsonify(student_skill.to_dict()), 201
+
+
+@user_bp.route("/skills/<string:skill_name>", methods=["PUT"])
+@require_auth
+@require_role("student")
+def update_user_skill(skill_name: str):
+    payload = request.get_json(silent=True) or {}
+    proficiency_level = payload.get("proficiency_level")
+    
+    if not proficiency_level:
+        raise ValidationError("proficiency_level is required")
+    
+    student_skill = update_student_skill(g.current_user.id, skill_name, proficiency_level)
+    return jsonify(student_skill.to_dict()), 200
+
+
+@user_bp.route("/skills/<string:skill_name>", methods=["DELETE"])
+@require_auth
+@require_role("student")
+def remove_user_skill(skill_name: str):
+    remove_student_skill(g.current_user.id, skill_name)
+    return "", 204
+
+
+@user_bp.route("/availability", methods=["PUT"])
+@require_auth
+@require_role("student")
+def update_availability():
+    payload = request.get_json(silent=True) or {}
+    availability_status = payload.get("availability_status")
+    
+    if not availability_status:
+        raise ValidationError("availability_status is required")
+    
+    update_student_availability(g.current_user.id, availability_status)
+    return jsonify({"message": "Availability status updated", "status": availability_status}), 200
+
+
+@user_bp.route("/skills/search", methods=["GET"])
+@require_auth
+def search_available_skills():
+    search_term = request.args.get("q", "")
+    category = request.args.get("category")
+    
+    if search_term:
+        skills = search_skills(search_term)
+    else:
+        skills = get_all_skills(category)
+    
+    return jsonify([skill.to_dict() for skill in skills]), 200

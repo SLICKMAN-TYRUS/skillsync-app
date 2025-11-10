@@ -6,6 +6,7 @@ from .notification import Notification
 from .saved_gig import SavedGig
 from .feedback import Feedback
 from .audit_log import AuditLog
+from .skill import Skill, StudentSkill
 
 __all__ = [
     "User",
@@ -16,4 +17,6 @@ __all__ = [
     "SavedGig",
     "Feedback",
     "AuditLog",
+    "Skill",
+    "StudentSkill",
 ]
