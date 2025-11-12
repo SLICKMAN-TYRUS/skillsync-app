@@ -30,6 +30,24 @@ def app():
     app.config.from_object(TestConfig)
     
     with app.app_context():
+        # Register lightweight test routes here so tests can rely on them being available
+        try:
+            from app.decorators import token_required, roles_required
+            from flask import g
+
+            @app.route('/__test/protected')
+            @token_required()
+            def __test_protected():
+                return {"uid": g.current_user.uid}, 200
+
+            @app.route('/__test/admin-only')
+            @token_required()
+            @roles_required('admin')
+            def __test_admin_only():
+                return {"ok": True}, 200
+        except Exception:
+            # If decorators aren't available yet, tests that need them will register their own
+            pass
         # Create all tables
         db.create_all()
         yield app

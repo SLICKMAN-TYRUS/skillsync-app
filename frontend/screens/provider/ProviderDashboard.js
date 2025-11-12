@@ -10,6 +10,8 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LineChart } from 'react-native-chart-kit';
 import { api } from '../../services/api';
+import firestoreAdapter from '../../services/firestoreAdapter';
+import { firebaseAuth } from '../../services/firebaseConfig';
 import RatingStars from '../../components/RatingStars';
 
 const ProviderDashboard = ({ navigation }) => {
@@ -32,9 +34,30 @@ const ProviderDashboard = ({ navigation }) => {
       setStats(response.data.stats);
       setEarningsData(response.data.earningsData);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setRefreshing(false);
+      console.warn('API dashboard fetch failed, falling back to Firestore:', error?.message || error);
+      try {
+        const uid = (firebaseAuth && firebaseAuth.currentUser && firebaseAuth.currentUser.uid) || null;
+        let gigs = [];
+        if (uid) {
+          gigs = await firestoreAdapter.fetchGigsByProvider(uid);
+        } else {
+          // last-resort: fetch all gigs and filter by providerName if possible
+          gigs = await firestoreAdapter.fetchGigs();
+        }
+
+        const activeGigs = gigs.filter(g => g._raw.status !== 'completed').length;
+        const completedGigs = gigs.filter(g => g._raw.status === 'completed').length;
+        const totalApplications = gigs.reduce((acc, g) => acc + (g.applicantsCount || 0), 0);
+        const averageRating = gigs.length ? gigs.reduce((acc, g) => acc + (g.rating || 0), 0) / gigs.length : 0;
+        const earnings = gigs.reduce((acc, g) => acc + ((g._raw.status === 'completed') ? (g.price || 0) : 0), 0);
+
+        setStats({ activeGigs, totalApplications, completedGigs, averageRating, earnings });
+        setEarningsData({ labels: [], datasets: [{ data: gigs.slice(0, 8).map(g => g.price || 0) }] });
+      } catch (e) {
+        console.error('Fallback Firestore fetch failed:', e);
+      } finally {
+        setRefreshing(false);
+      }
     }
   };
 

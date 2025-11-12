@@ -12,6 +12,8 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RoleBadge from '../../components/RoleBadge';
 import { api } from '../../services/api';
+import { fetchUserProfile } from '../../services/firestoreAdapter';
+import { firebaseAuth } from '../../services/firebaseConfig';
 
 const ProfileScreen = () => {
   const [profile, setProfile] = useState(null);
@@ -19,8 +21,21 @@ const ProfileScreen = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await api.get('/student/profile');
-      setProfile(response.data);
+      // Try Firestore user profile first (demo)
+      let data = null;
+      try {
+        const uid = firebaseAuth?.currentUser?.uid;
+        if (uid) data = await fetchUserProfile(uid);
+      } catch (e) {
+        // ignore
+      }
+
+      if (data) {
+        setProfile(data);
+      } else {
+        const response = await api.get('/student/profile');
+        setProfile(response.data);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {

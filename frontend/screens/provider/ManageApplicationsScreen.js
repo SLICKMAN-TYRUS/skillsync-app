@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api } from '../../services/api';
+import firestoreAdapter from '../../services/firestoreAdapter';
+import { firebaseAuth } from '../../services/firebaseConfig';
 
 const ManageApplicationsScreen = () => {
   const [applications, setApplications] = useState([]);
@@ -23,9 +25,19 @@ const ManageApplicationsScreen = () => {
       });
       setApplications(response.data);
     } catch (error) {
-      console.error('Error fetching applications:', error);
-    } finally {
-      setRefreshing(false);
+      console.warn('API applications fetch failed, falling back to Firestore:', error?.message || error);
+      try {
+        const uid = (firebaseAuth && firebaseAuth.currentUser && firebaseAuth.currentUser.uid) || null;
+        let apps = [];
+        if (uid) {
+          apps = await firestoreAdapter.fetchApplicationsByProvider(uid, filter === 'pending' ? 'pending' : null);
+        }
+        setApplications(apps);
+      } catch (e) {
+        console.error('Fallback Firestore fetch failed:', e);
+      } finally {
+        setRefreshing(false);
+      }
     }
   };
 

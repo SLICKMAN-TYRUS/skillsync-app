@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { Mail, Lock, User, MapPin, Briefcase, Home, MessageSquare, Bell, UserCircle, Search, Clock, DollarSign, CheckCircle, Upload, Send, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, User, MapPin, Briefcase, Home, MessageSquare, Bell, UserCircle, Search, Clock, DollarSign, CheckCircle, Upload, Send, ArrowLeft, Moon, Sun } from 'lucide-react';
+import ProviderDashboardWeb from '../screens/web/ProviderDashboardWeb';
+import AdminDashboardWeb from '../screens/web/AdminDashboardWeb';
 
 export default function SkillSyncApp() {
   const [currentPage, setCurrentPage] = useState('signup');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userType, setUserType] = useState('student');
+  const [isDark, setIsDark] = useState(false);
   const [notifications, setNotifications] = useState([
     { id: 1, text: 'Your application for "Math Tutoring" was accepted!', time: '2h ago', read: false },
     { id: 2, text: 'New gig posted: Event Photography', time: '5h ago', read: false },
@@ -26,55 +29,94 @@ export default function SkillSyncApp() {
     { id: 4, title: 'Website Bug Fixes', provider: 'Tech Startup', location: 'Remote', pay: '30,000 RWF', deadline: '3 days', category: 'Tech Support', description: 'Fix responsive design issues on our company website.' }
   ];
 
+  // Load Montserrat and set CSS variables for theme
+  useEffect(() => {
+    const id = 'skillsync-font';
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap';
+      document.head.appendChild(link);
+    }
+
+    document.documentElement.style.setProperty('--ss-primary', isDark ? '#0F172A' : '#EEF2FF');
+    document.documentElement.style.setProperty('--ss-accent', isDark ? '#7C3AED' : '#4F46E5');
+    document.documentElement.style.setProperty('--ss-surface', isDark ? '#0B1220' : '#FFFFFF');
+    document.documentElement.style.setProperty('--ss-text', isDark ? '#E6EEF8' : '#0F172A');
+  }, [isDark]);
+
+  // Responsive spacing: update CSS layout variables based on viewport width
+  useEffect(() => {
+    const updateSpacing = () => {
+      const w = window.innerWidth;
+      let pad = 24, gap = 20, maxW = 760;
+      if (w < 640) { pad = 16; gap = 14; maxW = Math.max(320, w - 48); }
+      else if (w < 1024) { pad = 20; gap = 18; maxW = Math.min(900, w - 120); }
+      else { pad = 28; gap = 22; maxW = 760; }
+      document.documentElement.style.setProperty('--content-padding', pad + 'px');
+      document.documentElement.style.setProperty('--content-gap', gap + 'px');
+      document.documentElement.style.setProperty('--content-max-width', maxW + 'px');
+    };
+
+    updateSpacing();
+    window.addEventListener('resize', updateSpacing);
+    return () => window.removeEventListener('resize', updateSpacing);
+  }, []);
+
   const renderSignup = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-8 mt-12">
-          <div className="bg-indigo-600 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-            <Briefcase className="text-white" size={32} />
+    <div className="page-wrap prod-typography">
+      <div className="single-strand">
+        <div className="header-pill">
+          <div className="pill-icon">
+            <Briefcase size={18} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">SkillSync</h1>
+        </div>
+
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold text-gray-800">SkillSync</h1>
           <p className="text-gray-600 mt-2">Connect. Earn. Grow.</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl p-8">
+        <div className="content-card">
+          <div className="auth-card">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Account</h2>
-          
-          <div className="space-y-4">
+
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input type="text" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="John Doe" />
+              <label className="label-muted">Full Name</label>
+              <div className="input-with-icon">
+                <User className="absolute" size={20} />
+                <input type="text" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="John Doe" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input type="email" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="you@alu.edu" />
+              <label className="label-muted">Email Address</label>
+              <div className="input-with-icon">
+                <Mail className="absolute" size={20} />
+                <input type="email" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="you@alu.edu" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input type="password" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••" />
+              <label className="label-muted">Password</label>
+              <div className="input-with-icon">
+                <Lock className="absolute" size={20} />
+                <input type="password" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input type="password" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••" />
+              <label className="label-muted">Confirm Password</label>
+              <div className="input-with-icon">
+                <Lock className="absolute" size={20} />
+                <input type="password" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Skill Category</label>
+              <label className="label-muted">Skill Category</label>
               <div className="relative">
                 <Briefcase className="absolute left-3 top-3 text-gray-400" size={20} />
                 <select className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white">
@@ -89,7 +131,7 @@ export default function SkillSyncApp() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+              <label className="label-muted">Location</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 text-gray-400" size={20} />
                 <select className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white">
@@ -101,25 +143,27 @@ export default function SkillSyncApp() {
                 </select>
               </div>
             </div>
+          </div>
 
+          <div className="mt-6">
             <button 
               onClick={() => {
                 setIsLoggedIn(true);
                 setCurrentPage('home');
               }}
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors mt-6"
+              className="w-full signup-cta"
             >
               Sign Up
             </button>
+          </div>
 
-            <div className="text-center mt-4">
-              <p className="text-gray-600">
-                Already have an account?{' '}
-                <button onClick={() => setCurrentPage('login')} className="text-indigo-600 font-semibold hover:underline">
-                  Log In
-                </button>
-              </p>
-            </div>
+          <div className="text-center mt-4">
+            <p className="text-gray-600">
+              Already have an account?{' '}
+              <button onClick={() => setCurrentPage('login')} className="login-box">
+                Log In
+              </button>
+            </p>
           </div>
         </div>
       </div>
@@ -127,62 +171,70 @@ export default function SkillSyncApp() {
   );
 
   const renderLogin = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-md mx-auto">
-        <div className="text-center mb-8 mt-12">
-          <div className="bg-indigo-600 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-            <Briefcase className="text-white" size={32} />
+    <div className="page-wrap prod-typography">
+      <div className="single-strand">
+        <div className="header-pill">
+          <div className="pill-icon">
+            <Briefcase size={18} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Log in to continue</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl p-8">
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold text-gray-800">SkillSync</h1>
+          <p className="text-gray-600 mt-2">Connect. Earn. Grow.</p>
+        </div>
+
+        <div className="content-card">
+          <div className="auth-card">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Log In</h2>
-          
-          <div className="space-y-4">
+
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input type="email" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="you@alu.edu" />
+              <label className="label-muted">Email Address</label>
+              <div className="input-with-icon">
+                <Mail className="absolute" size={20} />
+                <input type="email" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="you@alu.edu" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input type="password" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••" />
+              <label className="label-muted">Password</label>
+              <div className="input-with-icon">
+                <Lock className="absolute" size={20} />
+                <input type="password" className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••" />
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center">
-                <input type="checkbox" className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                <span className="ml-2 text-sm text-gray-600">Remember me</span>
-              </label>
-              <a href="#" className="text-sm text-indigo-600 hover:underline">Forgot password?</a>
-            </div>
+          <div className="flex items-center justify-between mt-4">
+            <label className="flex items-center">
+              <input type="checkbox" className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+              <span className="ml-2 text-sm text-gray-600">Remember me</span>
+            </label>
+            <a href="#" className="text-sm text-indigo-600 hover:underline">Forgot password?</a>
+          </div>
 
+          <div className="mt-6">
             <button 
               onClick={() => {
                 setIsLoggedIn(true);
                 setCurrentPage('home');
               }}
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors mt-6"
+              className="w-full signup-cta"
             >
               Log In
             </button>
+          </div>
 
-            <div className="text-center mt-4">
-              <p className="text-gray-600">
-                Don't have an account?{' '}
-                <button onClick={() => setCurrentPage('signup')} className="text-indigo-600 font-semibold hover:underline">
-                  Sign Up
-                </button>
-              </p>
-            </div>
+          <div className="text-center mt-4">
+            <p className="text-gray-600">
+              Don't have an account?{' '}
+              <button onClick={() => setCurrentPage('signup')} className="login-box">
+                Sign Up
+              </button>
+            </p>
+          </div>
+        </div>
           </div>
         </div>
       </div>
@@ -190,71 +242,88 @@ export default function SkillSyncApp() {
   );
 
   const renderHome = () => (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="bg-indigo-600 text-white p-6 pb-8 rounded-b-3xl">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Hi, Student!</h1>
-            <p className="text-indigo-100 text-sm">Find your next gig</p>
-          </div>
-          <div className="bg-indigo-500 p-3 rounded-full">
-            <UserCircle size={24} />
-          </div>
+    <div className="content-card">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Hi, {userType === 'student' ? 'Student' : userType === 'provider' ? 'Provider' : 'Admin'}!</h1>
+          <p className="text-sm text-gray-600">{userType === 'student' ? 'Find your next gig' : userType === 'provider' ? 'Manage your gigs & applications' : 'System overview and moderation'}</p>
         </div>
-
-        <div className="relative">
-          <Search className="absolute left-3 top-3 text-indigo-300" size={20} />
-          <input 
-            type="text" 
-            placeholder="Search gigs..." 
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-indigo-500 text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-white"
-          />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsDark(d => !d)}
+            title="Toggle theme"
+            className="bg-white/10 hover:bg-white/20 p-2 rounded-full text-gray-700 flex items-center"
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <div className="bg-white p-2 rounded-full">
+            <UserCircle size={22} />
+          </div>
+          <div className="bg-white rounded-full px-3 py-1 text-sm text-gray-700">
+            <label className="mr-2">View as</label>
+            <select value={userType} onChange={(e) => setUserType(e.target.value)} className="text-sm">
+              <option value="student">Student</option>
+              <option value="provider">Provider</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="p-6">
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {['All', 'Tutoring', 'Tech', 'Events', 'Marketing'].map(cat => (
-            <button key={cat} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${cat === 'All' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>
-              {cat}
-            </button>
-          ))}
-        </div>
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-3 text-indigo-300" size={20} />
+        <input 
+          type="text" 
+          placeholder="Search gigs..." 
+          className="w-full pl-10 pr-4 py-3 rounded-xl bg-indigo-50 text-gray-800 placeholder-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+        />
+      </div>
 
-        <div className="space-y-4">
-          {gigs.map(gig => (
-            <div key={gig.id} className="bg-white rounded-2xl p-5 shadow-sm" onClick={() => setSelectedGig(gig)}>
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-800 text-lg mb-1">{gig.title}</h3>
-                  <p className="text-gray-600 text-sm">{gig.provider}</p>
-                </div>
-                <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-medium">
-                  {gig.category}
-                </span>
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {['All', 'Tutoring', 'Tech', 'Events', 'Marketing'].map(cat => (
+          <button key={cat} className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${cat === 'All' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        {gigs.map(gig => (
+          <div key={gig.id} className="content-card" onClick={() => setSelectedGig(gig)}>
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-800 text-lg mb-1">{gig.title}</h3>
+                <p className="text-gray-600 text-sm">{gig.provider}</p>
               </div>
-              
-              <p className="text-gray-600 text-sm mb-4 line-clamp-2">{gig.description}</p>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <div className="flex items-center gap-1">
-                    <MapPin size={16} />
-                    <span>{gig.location}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock size={16} />
-                    <span>{gig.deadline}</span>
-                  </div>
-                </div>
-                <div className="text-indigo-600 font-bold">{gig.pay}</div>
-              </div>
+              <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-medium">
+                {gig.category}
+              </span>
             </div>
-          ))}
-        </div>
+            
+            <p className="text-gray-600 text-sm mb-4 line-clamp-2">{gig.description}</p>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <div className="flex items-center gap-1">
+                  <MapPin size={16} />
+                  <span>{gig.location}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock size={16} />
+                  <span>{gig.deadline}</span>
+                </div>
+              </div>
+              <div className="text-indigo-600 font-bold">{gig.pay}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
+
+  // Use separate web screen components for provider and admin to keep code modular
+  const renderProviderHome = () => <ProviderDashboardWeb gigs={gigs} isDark={isDark} setIsDark={setIsDark} />;
+  const renderAdminHome = () => <AdminDashboardWeb gigs={gigs} />;
 
   const renderGigDetail = () => (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -266,7 +335,7 @@ export default function SkillSyncApp() {
       </div>
 
       <div className="p-6">
-        <div className="bg-white rounded-2xl p-6 shadow-sm mb-4">
+        <div className="content-card mb-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
               <User className="text-indigo-600" size={24} />
@@ -423,21 +492,49 @@ export default function SkillSyncApp() {
     </div>
   );
 
+  const [resumeFile, setResumeFile] = useState(null);
+
+  const handleResumeUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) setResumeFile(file.name);
+  };
+
   const renderProfile = () => (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="bg-indigo-600 text-white p-6 pb-12 rounded-b-3xl">
+    <div className={`min-h-screen pb-20`} style={{ background: isDark ? '#071025' : '#F3F4F6', fontFamily: 'Montserrat, system-ui, -apple-system' }}>
+      <div style={{ background: isDark ? '#0b1220' : '#4F46E5' }} className="text-white p-6 pb-12 rounded-b-3xl">
         <div className="text-center">
           <div className="w-24 h-24 bg-white rounded-full mx-auto mb-4 flex items-center justify-center">
             <UserCircle className="text-indigo-600" size={60} />
           </div>
-          <h1 className="text-2xl font-bold">John Doe</h1>
+          <h1 className="text-2xl font-bold" style={{ color: isDark ? '#E6EEF8' : '#FFFFFF' }}>John Doe</h1>
           <p className="text-indigo-100">john.doe@alu.edu</p>
         </div>
       </div>
 
-      <div className="p-6 -mt-6">
-        <div className="bg-white rounded-2xl p-6 shadow-sm mb-4">
-          <h3 className="font-bold text-gray-800 mb-4">ID Verification</h3>
+      <div className="p-6 -mt-6 max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm mb-4" style={{ background: isDark ? '#071025' : '#FFFFFF', color: isDark ? '#E6EEF8' : '#0F172A' }}>
+          <h3 className="font-bold text-gray-800 mb-4">Contact Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">Email</label>
+              <div className="text-sm font-medium" style={{ color: isDark ? '#AFC6E8' : '#0F172A' }}>john.doe@alu.edu</div>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">Phone</label>
+              <div className="text-sm font-medium" style={{ color: isDark ? '#AFC6E8' : '#0F172A' }}>+250 788 000 000</div>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-500 mb-1">Resume</label>
+              <div className="flex items-center gap-3">
+                <input type="file" accept="application/pdf,application/msword" onChange={handleResumeUpload} />
+                <div className="text-sm text-gray-600">{resumeFile ? resumeFile : 'No resume uploaded'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+  <div className="content-card mb-4" style={{ background: isDark ? '#071025' : '#FFFFFF', color: isDark ? '#E6EEF8' : '#0F172A' }}>
+          <h3 className="font-bold mb-3">ID Verification</h3>
           {!idVerified ? (
             <div>
               <p className="text-sm text-gray-600 mb-4">Verify your student ID to unlock all features</p>
@@ -457,23 +554,15 @@ export default function SkillSyncApp() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-sm mb-4">
-          <h3 className="font-bold text-gray-800 mb-3">Skills</h3>
+  <div className="content-card mb-4" style={{ background: isDark ? '#071025' : '#FFFFFF', color: isDark ? '#E6EEF8' : '#0F172A' }}>
+          <h3 className="font-bold mb-3">Skills</h3>
           <div className="flex flex-wrap gap-2">
             <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm">Tutoring</span>
             <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm">Tech Support</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 shadow-sm mb-4">
-          <h3 className="font-bold text-gray-800 mb-3">Location</h3>
-          <div className="flex items-center gap-2 text-gray-600">
-            <MapPin size={18} />
-            <span>Kimironko, Kigali</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+  <div className="content-card" style={{ background: isDark ? '#071025' : '#FFFFFF' }}>
           <button className="w-full text-left py-2 text-gray-700 hover:text-indigo-600">Account Settings</button>
           <button className="w-full text-left py-2 text-gray-700 hover:text-indigo-600">Help & Support</button>
           <button className="w-full text-left py-2 text-gray-700 hover:text-indigo-600">Contact Admin</button>
@@ -528,18 +617,21 @@ export default function SkillSyncApp() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen">
-      {selectedGig && renderGigDetail()}
-      {selectedChat && renderChatDetail()}
-      {!selectedGig && !selectedChat && (
-        <>
-          {currentPage === 'home' && renderHome()}
-          {currentPage === 'chats' && renderChats()}
-          {currentPage === 'notifications' && renderNotifications()}
-          {currentPage === 'profile' && renderProfile()}
-          {renderBottomNav()}
-        </>
-      )}
+    <div className="page-wrap prod-typography" style={{ fontFamily: 'Montserrat, system-ui, -apple-system' }}>
+      <div className="single-strand" style={{ width: '100%' }}>
+        {selectedGig && renderGigDetail()}
+        {selectedChat && renderChatDetail()}
+        {!selectedGig && !selectedChat && (
+          <>
+            {currentPage === 'home' && (userType === 'student' ? renderHome() : userType === 'provider' ? renderProviderHome() : renderAdminHome())}
+            {currentPage === 'chats' && renderChats()}
+            {currentPage === 'notifications' && renderNotifications()}
+            {currentPage === 'profile' && renderProfile()}
+          </>
+        )}
+
+        {renderBottomNav()}
+      </div>
     </div>
   );
 }

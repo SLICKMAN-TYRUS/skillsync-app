@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 // Admin Screens
 import AdminDashboard from '../screens/admin/AdminDashboard';
@@ -21,6 +22,7 @@ import HomeScreen from '../screens/student/HomeScreen';
 import GigDetailScreen from '../screens/student/GigDetailScreen';
 import ApplicationStatusScreen from '../screens/student/ApplicationStatusScreen';
 import ProfileScreen from '../screens/student/ProfileScreen';
+import SignInScreen from '../screens/auth/SignInScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -126,13 +128,30 @@ const StudentTabs = () => {
   );
 };
 
+const QuickRoleSwitcher = ({ role, setRole }) => (
+  <View style={styles.roleSwitcher}>
+    {['student', 'provider', 'admin'].map(r => (
+      <TouchableOpacity
+        key={r}
+        onPress={() => setRole(r)}
+        style={[styles.roleButton, role === r && styles.roleButtonActive]}
+      >
+        <Text style={[styles.roleButtonText, role === r && styles.roleButtonTextActive]}>{r}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
 const AppNavigator = () => {
   // This should be replaced with actual auth state management
-  const userRole = 'student'; // 'admin', 'provider', or 'student'
+  const [userRole, setUserRole] = useState('student'); // 'admin', 'provider', or 'student'
 
   return (
     <NavigationContainer>
+      {/* Dev role switcher (visible in dev) */}
+      <QuickRoleSwitcher role={userRole} setRole={setUserRole} />
       <Stack.Navigator>
+        <Stack.Screen name="SignIn" component={SignInScreen} options={{ title: 'Sign In' }} />
         {userRole === 'admin' && (
           <Stack.Screen
             name="AdminTabs"
@@ -167,3 +186,32 @@ const AppNavigator = () => {
 };
 
 export default AppNavigator;
+
+const styles = StyleSheet.create({
+  roleSwitcher: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  roleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginHorizontal: 6,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+  },
+  roleButtonActive: {
+    backgroundColor: '#0066CC',
+  },
+  roleButtonText: {
+    color: '#333333',
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  roleButtonTextActive: {
+    color: '#FFFFFF',
+  },
+});

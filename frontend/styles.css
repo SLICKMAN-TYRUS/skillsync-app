@@ -1,0 +1,233 @@
+/* Basic global styles to emulate a clean Tailwind-like look for the demo */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
+:root{
+  /* tuned to match the attached design (richer purple) */
+  --primary:#6C33D1;
+  --primary-600:#5a2ab8;
+  --muted:#6B7280;
+  --bg:#F3F4F6;
+  --card:#FFFFFF;
+  --accent:#EEF2FF;
+  /* layout spacing tokens (responsive via JS) */
+  --content-max-width:760px;
+  --content-padding:24px;
+  --content-gap:20px;
+  --type-letter-spacing:0.2px;
+  --type-line-height:1.5;
+}
+
+*{box-sizing:border-box}
+html,body,#root{height:100%;}
+body{
+  margin:0;
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background:var(--bg);
+  color:var(--primary-600);
+}
+
+.min-h-screen{min-height:100vh}
+.max-w-md{max-width:720px}
+.max-w-6xl{max-width:1200px}
+.mx-auto{margin-left:auto;margin-right:auto}
+.p-6{padding:1.5rem}
+.p-8{padding:2rem}
+.pb-20{padding-bottom:5rem}
+.rounded-2xl{border-radius:1rem}
+.rounded-3xl{border-radius:1.5rem}
+.rounded-full{border-radius:9999px}
+.shadow-xl{box-shadow:0 10px 25px rgba(15,23,42,0.08)}
+.bg-white{background:var(--card)}
+.bg-indigo-600{background:var(--primary)}
+.text-white{color:#fff}
+.text-center{text-align:center}
+.text-2xl{font-size:1.5rem}
+.text-3xl{font-size:1.875rem}
+.text-4xl{font-size:2.25rem}
+.font-bold{font-weight:700}
+.text-sm{font-size:0.875rem}
+.text-gray-600{color:var(--muted)}
+.text-gray-800{color:#111827}
+.placeholder-indigo-200::placeholder{color:#C7D2FE}
+.rounded-xl{border-radius:0.75rem}
+.w-full{width:100%}
+.py-3{padding-top:0.75rem;padding-bottom:0.75rem}
+.px-4{padding-left:1rem;padding-right:1rem}
+.pl-10{padding-left:2.5rem}
+.pr-4{padding-right:1rem}
+.mb-4{margin-bottom:1rem}
+.mt-2{margin-top:0.5rem}
+.mt-6{margin-top:1.5rem}
+.mb-6{margin-bottom:1.5rem}
+.space-y-4 > * + *{margin-top:1rem}
+
+/* Layout helpers */
+.app-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+.container-card{background:var(--card);border-radius:1rem;box-shadow:0 14px 40px rgba(2,6,23,0.08);overflow:hidden;padding:2rem}
+.center-screen{width:100%;max-width:1200px;max-height:calc(100vh - 4rem);overflow:auto;padding:1.5rem}
+.max-w-2xl{max-width:760px}
+.max-w-4xl{max-width:1100px}
+.grid{display:grid}
+.gap-8{gap:2rem}
+.items-center{align-items:center}
+.justify-center{justify-content:center}
+.md\:grid-cols-2{grid-template-columns:1fr}
+@media(min-width:768px){
+  .md\:grid-cols-2{grid-template-columns:1fr 1fr}
+}
+
+/* helpers */
+.text-muted{color:var(--muted)}
+.small{font-size:0.9rem}
+
+/* Form elements */
+input[type="text"], input[type="email"], input[type="password"], select, textarea{
+  width:100%;
+  padding:0.75rem 1rem;
+  border:1px solid #E5E7EB;
+  border-radius:0.75rem;
+  font-size:1rem;
+  outline: none;
+}
+input[type="file"]{font-size:0.95rem}
+input:focus, select:focus, textarea:focus{box-shadow:0 0 0 4px rgba(79,70,229,0.12);border-color:var(--primary-600)}
+
+button{cursor:pointer}
+.bg-indigo-600{background:var(--primary)}
+.bg-indigo-700{background:#4338CA}
+button[type=submit], .btn{
+  display:inline-block;padding:0.75rem 1rem;border-radius:0.75rem;border:none;color:#fff;background:var(--primary);font-weight:600
+}
+
+/* Utility for small icons inside inputs */
+.relative{position:relative}
+.absolute{position:absolute}
+.left-3{left:0.75rem}
+.top-3{top:0.75rem}
+.text-gray-400{color:#9CA3AF}
+
+/* Responsive grid */
+.grid{display:grid}
+@media(min-width:768px){
+  .md\:grid-cols-2{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Bottom nav */
+.fixed{position:fixed}
+.bottom-0{bottom:0}
+.left-0{left:0}
+.right-0{right:0}
+.border-t{border-top:1px solid #e5e7eb}
+
+/* small helper */
+.text-indigo-100{color:#EEF2FF}
+.bg-indigo-100{background:#EEF2FF}
+
+/* Header pill shown at top of page */
+.header-pill{background:var(--primary);padding:0.5rem;border-radius:9999px;max-width:1200px;margin:0.5rem auto 1.25rem;display:flex;align-items:center;justify-content:center;width:calc(100% - 3rem)}
+.header-pill svg{color:#fff}
+
+/* Page wrapper - center everything and create a single-column vertical strand */
+.page-wrap{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:48px 16px;
+  box-sizing:border-box;
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+/* Single vertical content column: every screen's content lives inside this column */
+.single-strand{
+  width:100%;
+  max-width:var(--content-max-width);
+  display:flex;
+  flex-direction:column;
+  gap:var(--content-gap);
+  align-items:stretch;
+}
+
+/* Content card: white surface with consistent padding and rounded corners used across screens */
+.content-card{
+  background:var(--card);
+  border-radius:16px;
+  padding:calc(var(--content-padding));
+  box-shadow:0 10px 30px rgba(2,6,23,0.06);
+  box-sizing:border-box;
+  transition:box-shadow .18s ease, transform .12s ease;
+}
+
+/* Typographic tuning for production-like appearance */
+.prod-typography{letter-spacing:var(--type-letter-spacing);line-height:var(--type-line-height);}
+
+/* Base page typography and accessibility */
+html,body,#root{height:100%;}
+html{font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{margin:0;background:var(--bg);color:var(--ss-text);font-family:Montserrat, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+
+/* Accessible focus states */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline:3px solid rgba(99,102,241,0.22);
+  outline-offset:3px;
+  border-radius:8px;
+}
+
+/* Primary CTA */
+.signup-cta{background:var(--primary);color:#fff;padding:12px 18px;border-radius:9999px;font-weight:600;letter-spacing:0.3px;border:none;box-shadow:0 6px 18px rgba(108,51,209,0.14);cursor:pointer}
+.signup-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(108,51,209,0.18)}
+.signup-cta:active{transform:translateY(0)}
+
+/* small boxed login link */
+.login-box{background:#fff;border:1px solid rgba(15,23,42,0.06);padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer}
+
+/* Input defaults to be consistent across the app */
+.input-with-icon{position:relative}
+.input-with-icon .absolute{left:12px;top:50%;transform:translateY(-50%);color:#9CA3AF}
+.content-card input, .content-card select, .content-card textarea{width:100%;padding:calc(var(--content-padding) / 2);border:1px solid rgba(15,23,42,0.06);border-radius:12px;box-sizing:border-box}
+.content-card label{display:block;margin-bottom:8px;color:var(--muted);font-size:0.95rem}
+
+/* Ensure consistent spacing for card children */
+.content-card > * + *{margin-top:calc(var(--content-gap) / 2)}
+
+@media (max-width: 640px){
+  html{font-size:15px}
+  :root{--content-padding:18px;--content-gap:16px}
+  .page-wrap{padding:28px 12px}
+}
+
+/* ensure inputs and labels have consistent spacing inside content-card */
+.content-card .label-muted{margin-bottom:8px}
+.content-card input, .content-card select, .content-card textarea{padding:12px;border-radius:12px}
+
+@media (max-width: 640px){
+  :root{--content-padding:18px;--content-gap:16px}
+  .page-wrap{padding:28px 12px}
+}
+
+/* Card inner layout for signup/login */
+.auth-card{padding:2.25rem;border-radius:1rem}
+.auth-title{font-size:1.5rem;font-weight:700;margin-bottom:0.75rem;color:var(--primary-600)}
+.label-muted{font-size:0.85rem;color:var(--primary);font-weight:600;margin-bottom:0.5rem}
+.input-with-icon{position:relative}
+.input-with-icon .absolute{left:1rem;top:0.9rem;color:#9CA3AF}
+.input-with-icon input{padding-left:3rem}
+
+/* small white icon box inside the top pill */
+.pill-icon{width:36px;height:36px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--primary);box-shadow:0 4px 10px rgba(2,6,23,0.06)}
+
+.signup-cta{background:var(--primary);border-radius:9999px;padding:0.9rem 1rem;color:#fff;font-weight:700;box-shadow:0 8px 22px rgba(108,51,209,0.18);border:1px solid rgba(0,0,0,0.06);font-size:1rem}
+.signup-cta:hover{background:var(--primary-600)}
+
+/* small boxed login control used in the 'Already have an account?' row */
+.login-box{border:1px solid #E5E7EB;background:#F9FAFB;padding:0.25rem 0.6rem;border-radius:6px;font-size:0.9rem;color:#111827}
+
+/* Keep the auth-card as a single column container; inside it the form grid (md:grid-cols-2) handles splitting fields */
+
+/* Dark mode variants (simple) */
+body.dark{background:#071025;color:#E6EEF8}
+.dark\:bg-gray-800{background:#0B1220}
+
+/* Tweak header pill to be a centered bar with a small white icon box */
+.header-pill{background:var(--primary);padding:0.5rem;border-radius:9999px;max-width:760px;margin:0.5rem auto 1.25rem;display:flex;align-items:center;justify-content:center;width:calc(100% - 3rem)}
+.header-pill svg{color:var(--primary)}

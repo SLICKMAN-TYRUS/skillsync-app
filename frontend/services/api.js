@@ -1,5 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { firebaseAuth } from './firebaseConfig';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -13,7 +14,18 @@ const api = axios.create({
 // Request interceptor for API calls
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('auth_token');
+    let token = await AsyncStorage.getItem('auth_token');
+    // If no token in storage, try to get a fresh ID token from Firebase Auth
+    try {
+      if (!token && firebaseAuth && firebaseAuth.currentUser) {
+        token = await firebaseAuth.currentUser.getIdToken(true);
+        // also cache it for other code paths
+        await AsyncStorage.setItem('auth_token', token);
+      }
+    } catch (err) {
+      // ignore failures getting token (user unauthenticated)
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

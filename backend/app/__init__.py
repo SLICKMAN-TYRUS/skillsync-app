@@ -5,6 +5,7 @@ from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
 from .services.exceptions import ServiceError
+from .firebase import init_firebase_app
 
 db = SQLAlchemy()
 
@@ -14,6 +15,13 @@ def create_app():
 
     CORS(app)
     db.init_app(app)
+
+    # Initialize Firebase Admin SDK (if credentials are available via env)
+    try:
+        init_firebase_app(app)
+    except Exception:
+        # init_firebase_app logs internally; don't block app startup if Firebase not configured
+        app.logger.info("Firebase Admin SDK not initialized or not configured")
 
     # Register Blueprints
     from .routes.auth_routes import auth_bp

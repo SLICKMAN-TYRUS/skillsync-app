@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import RatingStars from '../../components/RatingStars';
 import RoleBadge from '../../components/RoleBadge';
 import { api } from '../../services/api';
+import { fetchGigById } from '../../services/firestoreAdapter';
 
 const GigDetailScreen = ({ route, navigation }) => {
   const { gigId } = route.params;
@@ -25,8 +26,15 @@ const GigDetailScreen = ({ route, navigation }) => {
 
   const fetchGigDetails = async () => {
     try {
-      const response = await api.get(`/student/gigs/${gigId}`);
-      setGig(response.data);
+      // Try Firestore adapter first for demo data
+      const data = await fetchGigById(gigId);
+      if (data) {
+        setGig(data);
+      } else {
+        // fallback to REST API
+        const response = await api.get(`/student/gigs/${gigId}`);
+        setGig(response.data);
+      }
     } catch (error) {
       console.error('Error fetching gig details:', error);
       Alert.alert('Error', 'Failed to load gig details');

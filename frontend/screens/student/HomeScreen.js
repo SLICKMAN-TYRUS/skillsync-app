@@ -11,6 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import GigCard from '../../components/GigCard';
 import { api } from '../../services/api';
+import { fetchGigs } from '../../services/firestoreAdapter';
 
 const HomeScreen = ({ navigation }) => {
   const [gigs, setGigs] = useState([]);
@@ -27,15 +28,23 @@ const HomeScreen = ({ navigation }) => {
 
   const fetchGigs = async () => {
     try {
-      const response = await api.get('/student/gigs', {
-        params: {
-          category: selectedCategory !== 'all' ? selectedCategory : undefined,
-          search: searchQuery,
-        },
-      });
-      setGigs(response.data);
+      // Prefer Firestore adapter for demo data when available
+      const data = await fetchGigs({ category: selectedCategory, search: searchQuery });
+      setGigs(data);
     } catch (error) {
-      console.error('Error fetching gigs:', error);
+      console.error('Error fetching gigs from Firestore adapter:', error);
+      // fallback to REST API
+      try {
+        const response = await api.get('/student/gigs', {
+          params: {
+            category: selectedCategory !== 'all' ? selectedCategory : undefined,
+            search: searchQuery,
+          },
+        });
+        setGigs(response.data);
+      } catch (err) {
+        console.error('Error fetching gigs via API fallback:', err);
+      }
     } finally {
       setRefreshing(false);
     }

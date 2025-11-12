@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api } from '../../services/api';
+import firestoreAdapter from '../../services/firestoreAdapter';
 
 const ApproveGigsScreen = () => {
   const [gigs, setGigs] = useState([]);
@@ -20,9 +21,15 @@ const ApproveGigsScreen = () => {
       const response = await api.get('/admin/pending-gigs');
       setGigs(response.data);
     } catch (error) {
-      console.error('Error fetching pending gigs:', error);
-    } finally {
-      setRefreshing(false);
+      console.warn('API pending gigs fetch failed, falling back to Firestore:', error?.message || error);
+      try {
+        const pending = await firestoreAdapter.fetchPendingGigs();
+        setGigs(pending);
+      } catch (e) {
+        console.error('Fallback Firestore fetch failed:', e);
+      } finally {
+        setRefreshing(false);
+      }
     }
   };
 

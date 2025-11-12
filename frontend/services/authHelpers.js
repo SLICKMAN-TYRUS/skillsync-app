@@ -1,0 +1,23 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { firebaseAuth } from './firebaseConfig';
+
+export async function signIn(email, password) {
+  const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+  const user = userCredential.user;
+  const idToken = await user.getIdToken();
+  await AsyncStorage.setItem('auth_token', idToken);
+  await AsyncStorage.setItem('user', JSON.stringify({ uid: user.uid, email: user.email }));
+  return { uid: user.uid, email: user.email };
+}
+
+export async function signOut() {
+  try {
+    await firebaseAuth.signOut();
+  } catch (e) {
+    // ignore
+  }
+  await AsyncStorage.multiRemove(['auth_token', 'refresh_token', 'user']);
+}
+
+export default { signIn, signOut };
