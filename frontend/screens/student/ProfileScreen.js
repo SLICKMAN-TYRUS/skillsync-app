@@ -2,25 +2,29 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
-  Image,
-  Alert,
+  StatusBar,
+  SafeAreaView,
+  ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import RoleBadge from '../../components/RoleBadge';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/api';
 import { fetchUserProfile } from '../../services/firestoreAdapter';
 import { firebaseAuth } from '../../services/firebaseConfig';
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }) => {
   const [profile, setProfile] = useState(null);
+  const [applications, setApplications] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchProfile = async () => {
     try {
+      setRefreshing(true);
       // Try Firestore user profile first (demo)
       let data = null;
       try {
@@ -36,10 +40,38 @@ const ProfileScreen = () => {
         const response = await api.get('/student/profile');
         setProfile(response.data);
       }
+
+      // Fetch applications
+      const appsResponse = await api.get('/applications');
+      const formattedApps = appsResponse.data.map(app => ({
+        id: app.id,
+        title: app.gigTitle || app.title,
+        status: app.status.charAt(0).toUpperCase() + app.status.slice(1),
+        statusColor: getStatusColor(app.status),
+      }));
+      setApplications(formattedApps);
     } catch (error) {
       console.error('Error fetching profile:', error);
+      Alert.alert('Error', 'Failed to load profile data');
     } finally {
       setRefreshing(false);
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case 'accepted':
+      case 'approved':
+        return '#4CAF50';
+      case 'pending':
+        return '#FFC107';
+      case 'rejected':
+      case 'declined':
+        return '#F44336';
+      default:
+        return '#2196F3';
     }
   };
 
@@ -47,141 +79,131 @@ const ProfileScreen = () => {
     fetchProfile();
   }, []);
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          onPress: async () => {
-            try {
-              await api.post('/auth/logout');
-              // Handle logout in app context/navigation
-            } catch (error) {
-              Alert.alert('Error', 'Failed to logout');
-            }
-          },
-          style: 'destructive',
-        },
-      ],
-    );
-  };
-
-  const StatCard = ({ title, value, icon }) => (
-    <View style={styles.statCard}>
-      <Icon name={icon} size={24} color="#0066CC" />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
-    </View>
-  );
-
-  if (!profile) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0066CC" />
+        <ActivityIndicator size="large" color="#2196F3" />
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={fetchProfile} />
-      }
-    >
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#2196F3" />
+      
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.profileInfo}>
-          {profile.avatar ? (
-            <Image source={{ uri: profile.avatar }} style={styles.avatar} />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+          <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={fetchProfile} />
+        }
+      >
+        {/* Profile Info Section */}
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            {profile?.avatar ? (
+              <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={40} color="#666666" />
+            )}
+          </View>
+          
+          <Text style={styles.userName}>{profile?.name || 'User Name'}</Text>
+          <Text style={styles.applicationsText}>
+            Done {applications.length} Applications
+          </Text>
+          <Text style={styles.userEmail}>{profile?.email || 'email@example.com'}</Text>
+        </View>
+
+        {/* My Applications Section */}
+        <View style={styles.applicationsSection}>
+          <Text style={styles.sectionTitle}>My Applications</Text>
+          
+          {applications.length > 0 ? (
+            applications.map((application) => (
+              <TouchableOpacity 
+                key={application.id} 
+                style={styles.applicationCard}
+                onPress={() => navigation.navigate('ApplicationDetails', { id: application.id })}
+              >
+                <Text style={styles.applicationTitle}>{application.title}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: `${application.statusColor}20` },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: application.statusColor },
+                    ]}
+                  >
+                    {application.status}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarText}>
-                {profile.name.charAt(0)}
-              </Text>
+            <View style={styles.emptyState}>
+              <Ionicons name="document-outline" size={48} color="#CCCCCC" />
+              <Text style={styles.emptyStateText}>No applications yet</Text>
             </View>
           )}
-          <View style={styles.nameContainer}>
-            <Text style={styles.name}>{profile.name}</Text>
-            <RoleBadge role={profile.role} />
-          </View>
-          <Text style={styles.email}>{profile.email}</Text>
         </View>
+      </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Ionicons name="home-outline" size={24} color="#666666" />
+          <Text style={styles.navText}>Home</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => {/* Navigate to edit profile */}}
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Gigs')}
         >
-          <Icon name="edit" size={20} color="#FFFFFF" />
-          <Text style={styles.editButtonText}>Edit Profile</Text>
+          <Ionicons name="briefcase-outline" size={24} color="#666666" />
+          <Text style={styles.navText}>Gigs</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Inbox')}
+        >
+          <Ionicons name="chatbox-outline" size={24} color="#666666" />
+          <Text style={styles.navText}>Inbox</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Notifications')}
+        >
+          <Ionicons name="notifications-outline" size={24} color="#666666" />
+          <Text style={styles.navText}>Notifications</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="person" size={24} color="#2196F3" />
+          <Text style={[styles.navText, styles.navTextActive]}>Profile</Text>
         </TouchableOpacity>
       </View>
-
-      <View style={styles.statsContainer}>
-        <StatCard
-          title="Applications"
-          value={profile.stats.applications}
-          icon="description"
-        />
-        <StatCard
-          title="Accepted"
-          value={profile.stats.accepted}
-          icon="check-circle"
-        />
-        <StatCard
-          title="Completed"
-          value={profile.stats.completed}
-          icon="star"
-        />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Academic Information</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Student ID</Text>
-          <Text style={styles.infoValue}>{profile.studentId}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Year Level</Text>
-          <Text style={styles.infoValue}>{profile.yearLevel}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Major</Text>
-          <Text style={styles.infoValue}>{profile.major}</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Skills</Text>
-        <View style={styles.skillsContainer}>
-          {profile.skills.map((skill, index) => (
-            <View key={index} style={styles.skillBadge}>
-              <Text style={styles.skillText}>{skill}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Settings</Text>
-        <TouchableOpacity style={styles.settingButton}>
-          <Icon name="notifications" size={24} color="#333333" />
-          <Text style={styles.settingText}>Notifications</Text>
-          <Icon name="chevron-right" size={24} color="#666666" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.settingButton}>
-          <Icon name="security" size={24} color="#333333" />
-          <Text style={styles.settingText}>Privacy & Security</Text>
-          <Icon name="chevron-right" size={24} color="#666666" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.settingButton} onPress={handleLogout}>
-          <Icon name="logout" size={24} color="#F44336" />
-          <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -194,134 +216,133 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
   },
   header: {
+    backgroundColor: '#2196F3',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
+  },
+  profileSection: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    paddingVertical: 32,
+    paddingHorizontal: 16,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  profileInfo: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 16,
-  },
-  avatarPlaceholder: {
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  avatarText: {
-    fontSize: 40,
-    color: '#666666',
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
-  nameContainer: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  name: {
-    fontSize: 24,
+  userName: {
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 8,
+    color: '#333333',
+    marginBottom: 4,
   },
-  email: {
-    fontSize: 16,
+  applicationsText: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
     color: '#666666',
   },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0066CC',
+  applicationsSection: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 16,
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  editButtonText: {
-    color: '#FFFFFF',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    marginTop: 8,
-  },
-  statCard: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 4,
-  },
-  statTitle: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  section: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    color: '#333333',
     marginBottom: 16,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+  applicationCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
   },
-  infoLabel: {
+  applicationTitle: {
     fontSize: 16,
-    color: '#666666',
-  },
-  infoValue: {
-    fontSize: 16,
+    fontWeight: '600',
     color: '#333333',
-    fontWeight: '500',
-  },
-  skillsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  skillBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
     marginBottom: 8,
   },
-  skillText: {
-    color: '#0066CC',
-    fontSize: 14,
-    fontWeight: '500',
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  settingButton: {
-    flexDirection: 'row',
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyState: {
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingVertical: 32,
   },
-  settingText: {
-    flex: 1,
+  emptyStateText: {
     fontSize: 16,
-    marginLeft: 16,
-    color: '#333333',
+    color: '#999999',
+    marginTop: 8,
   },
-  logoutText: {
-    color: '#F44336',
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    paddingVertical: 8,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  navText: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+  },
+  navTextActive: {
+    color: '#2196F3',
   },
 });
 
