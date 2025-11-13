@@ -23,7 +23,8 @@ const UserManagementScreen = () => {
       const response = await api.get('/admin/users', {
         params: { search: searchQuery },
       });
-      setUsers(response.data);
+      // backend returns paginated object { items, page, per_page, total }
+      setUsers(response.data?.items || []);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -39,17 +40,7 @@ const UserManagementScreen = () => {
     fetchUsers();
   };
 
-  const handleUserStatusChange = async (userId, newStatus) => {
-    try {
-      await api.patch(`/admin/users/${userId}/status`, { status: newStatus });
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, status: newStatus } : user
-      ));
-      Alert.alert('Success', 'User status updated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update user status');
-    }
-  };
+  // backend does not expose a direct status endpoint; admin can change roles
 
   const handleRoleChange = async (userId, newRole) => {
     Alert.alert(
@@ -82,20 +73,9 @@ const UserManagementScreen = () => {
           <Text style={styles.userName}>{item.name}</Text>
           <RoleBadge role={item.role} />
         </View>
-        <TouchableOpacity
-          style={[
-            styles.statusBadge,
-            { backgroundColor: item.status === 'active' ? '#4CAF50' : '#F44336' },
-          ]}
-          onPress={() => handleUserStatusChange(
-            item.id,
-            item.status === 'active' ? 'suspended' : 'active'
-          )}
-        >
-          <Text style={styles.statusText}>
-            {item.status === 'active' ? 'Active' : 'Suspended'}
-          </Text>
-        </TouchableOpacity>
+        <View style={[styles.statusBadge, { backgroundColor: '#E0E0E0' }]}> 
+          <Text style={[styles.statusText, { color: '#333333' }]}>{item.role}</Text>
+        </View>
       </View>
 
       <Text style={styles.userEmail}>{item.email}</Text>
@@ -103,15 +83,15 @@ const UserManagementScreen = () => {
       <View style={styles.stats}>
         <View style={styles.statItem}>
           <Icon name="work" size={16} color="#666666" />
-          <Text style={styles.statText}>{item.gigCount} Gigs</Text>
+          <Text style={styles.statText}>{item.average_rating ? `${item.average_rating} Rating` : 'No rating'}</Text>
         </View>
         <View style={styles.statItem}>
           <Icon name="star" size={16} color="#666666" />
-          <Text style={styles.statText}>{item.rating} Rating</Text>
+          <Text style={styles.statText}>{item.role}</Text>
         </View>
         <View style={styles.statItem}>
           <Icon name="date-range" size={16} color="#666666" />
-          <Text style={styles.statText}>Joined {item.joinDate}</Text>
+          <Text style={styles.statText}>Joined {item.created_at ? item.created_at.split('T')[0] : 'N/A'}</Text>
         </View>
       </View>
 

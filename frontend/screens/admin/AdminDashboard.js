@@ -6,6 +6,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -26,9 +27,25 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/admin/dashboard');
-      setStats(response.data.stats);
-      setChartData(response.data.chartData);
+      // Get overview analytics and user analytics (for chart)
+      const [overviewRes, usersRes] = await Promise.all([
+        api.get('/admin/analytics/overview'),
+        api.get('/admin/analytics/users'),
+      ]);
+
+      const overview = overviewRes.data || {};
+      setStats({
+        totalUsers: (overview.total_students || 0) + (overview.total_providers || 0) + (overview.total_admins || 0),
+        activeGigs: overview.active_gigs_count || 0,
+        pendingApprovals: overview.total_applications || 0,
+        completedGigs: overview.completed_gigs_count || 0,
+      });
+
+      // Build a simple chart from user growth if available
+      const userAnalytics = usersRes.data || {};
+      const labels = (userAnalytics.user_growth || []).map(u => u.month);
+      const data = (userAnalytics.user_growth || []).map(u => u.count);
+      setChartData({ labels, datasets: [{ data }] });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -99,7 +116,7 @@ const AdminDashboard = () => {
         <Text style={styles.chartTitle}>Activity Overview</Text>
         <LineChart
           data={chartData}
-          width={styles.chartWidth}
+          width={Dimensions.get('window').width - 32}
           height={220}
           chartConfig={{
             backgroundColor: '#FFFFFF',
@@ -194,7 +211,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   chartWidth: {
-    width: '100%' - 32, // Full width minus padding
+    // removed static chartWidth; width is computed dynamically via Dimensions
   },
   chart: {
     marginVertical: 8,

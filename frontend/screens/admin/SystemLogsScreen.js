@@ -19,10 +19,11 @@ const SystemLogsScreen = () => {
 
   const fetchLogs = async () => {
     try {
-      const response = await api.get('/admin/system-logs', {
-        params: { filter, search: searchQuery },
+      const response = await api.get('/admin/audit-logs', {
+        params: { resource_type: filter === 'all' ? undefined : filter, search: searchQuery },
       });
-      setLogs(response.data);
+      // backend returns paginated { items, ... }
+      setLogs(response.data?.items || []);
     } catch (error) {
       console.error('Error fetching system logs:', error);
     } finally {
