@@ -18,8 +18,9 @@ const ApproveGigsScreen = () => {
 
   const fetchPendingGigs = async () => {
     try {
-      const response = await api.get('/admin/pending-gigs');
-      setGigs(response.data);
+      const response = await api.get('/admin/gigs/pending');
+      // backend returns array of gigs
+      setGigs(response.data || []);
     } catch (error) {
       console.warn('API pending gigs fetch failed, falling back to Firestore:', error?.message || error);
       try {
@@ -39,7 +40,7 @@ const ApproveGigsScreen = () => {
 
   const handleApprove = async (gigId) => {
     try {
-      await api.post(`/admin/gigs/${gigId}/approve`);
+      await api.patch(`/admin/gigs/${gigId}/approve`);
       setGigs(gigs.filter(gig => gig.id !== gigId));
       Alert.alert('Success', 'Gig has been approved');
     } catch (error) {
@@ -58,7 +59,7 @@ const ApproveGigsScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.post(`/admin/gigs/${gigId}/reject`);
+              await api.patch(`/admin/gigs/${gigId}/reject`, { reason: 'Rejected by admin' });
               setGigs(gigs.filter(gig => gig.id !== gigId));
               Alert.alert('Success', 'Gig has been rejected');
             } catch (error) {

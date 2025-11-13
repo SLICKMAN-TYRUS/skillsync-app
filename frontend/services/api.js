@@ -122,16 +122,19 @@ const providerApi = {
 
 // Admin API calls
 const adminApi = {
-  getDashboard: () => api.get('/admin/dashboard'),
-  getPendingGigs: () => api.get('/admin/pending-gigs'),
-  approveGig: (gigId) => api.post(`/admin/gigs/${gigId}/approve`),
-  rejectGig: (gigId) => api.post(`/admin/gigs/${gigId}/reject`),
+  // backend admin blueprint is registered under /api/admin
+  getDashboard: () => api.get('/admin/analytics/overview'),
+  // pending gigs endpoint
+  getPendingGigs: () => api.get('/admin/gigs/pending'),
+  // approve/reject use PATCH in backend
+  approveGig: (gigId) => api.patch(`/admin/gigs/${gigId}/approve`),
+  rejectGig: (gigId, body = {}) => api.patch(`/admin/gigs/${gigId}/reject`, body),
+  // users list returns paginated object { items, page, per_page, total }
   getUsers: (params) => api.get('/admin/users', { params }),
-  updateUserStatus: (userId, data) =>
-    api.patch(`/admin/users/${userId}/status`, data),
-  updateUserRole: (userId, data) =>
-    api.patch(`/admin/users/${userId}/role`, data),
-  getSystemLogs: (params) => api.get('/admin/system-logs', { params }),
+  // backend exposes role change endpoint
+  updateUserRole: (userId, data) => api.patch(`/admin/users/${userId}/role`, data),
+  // audit logs endpoint (paginated)
+  getSystemLogs: (params) => api.get('/admin/audit-logs', { params }),
 };
 
 export {
