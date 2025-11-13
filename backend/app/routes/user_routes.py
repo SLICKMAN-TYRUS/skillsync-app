@@ -1,4 +1,6 @@
 from flask import Blueprint, jsonify, g, request
+import json
+from datetime import datetime
 
 from ..models import SavedGig
 from ..services.exceptions import ValidationError
@@ -46,6 +48,240 @@ def update_profile():
         raise ValidationError("Provide at least one field to update")
     updated = update_user_profile(g.current_user.id, payload)
     return jsonify(user_to_dict(updated, include_email=True)), 200
+
+
+@user_bp.route("/profile/extended", methods=["GET"])
+@require_auth
+def get_extended_profile():
+    """Get extended profile data (phone, social links, experience, education)"""
+    user = get_user_by_id(g.current_user.id)
+    
+    # Parse extended data from bio field (JSON storage)
+    extended_data = {
+        "phone": "",
+        "social_links": {
+            "github": "",
+            "linkedin": "", 
+            "portfolio": ""
+        },
+        "experience": [],
+        "education": []
+    }
+    
+    try:
+        if user.bio and user.bio.startswith('{'):
+            parsed_bio = json.loads(user.bio)
+            # Merge with extended_data
+            if "phone" in parsed_bio:
+                extended_data["phone"] = parsed_bio.get("phone", "")
+            if "social_links" in parsed_bio:
+                extended_data["social_links"] = parsed_bio.get("social_links", {})
+            if "experience" in parsed_bio:
+                extended_data["experience"] = parsed_bio.get("experience", [])
+            if "education" in parsed_bio:
+                extended_data["education"] = parsed_bio.get("education", [])
+    except json.JSONDecodeError:
+        # Bio is not JSON, use default extended data
+        pass
+    
+    return jsonify(extended_data), 200
+
+
+@user_bp.route("/profile/extended", methods=["PUT"])
+@require_auth
+def update_extended_profile():
+    """Update extended profile data"""
+    payload = request.get_json(silent=True) or {}
+    
+    user = get_user_by_id(g.current_user.id)
+    current_bio = user.bio or ""
+    
+    # Parse existing bio if it's JSON
+    existing_data = {}
+    original_bio_text = current_bio
+    
+    try:
+        if current_bio and current_bio.startswith('{'):
+            existing_data = json.loads(current_bio)
+            original_bio_text = existing_data.get("original_bio", current_bio)
+    except json.JSONDecodeError:
+        original_bio_text = current_bio
+        existing_data = {}
+    
+    # Update with new data
+    updated_data = {
+        "original_bio": original_bio_text,
+        "phone": payload.get("phone", existing_data.get("phone", "")),
+        "social_links": {
+            "github": payload.get("social_links", {}).get("github", existing_data.get("social_links", {}).get("github", "")),
+            "linkedin": payload.get("social_links", {}).get("linkedin", existing_data.get("social_links", {}).get("linkedin", "")),
+            "portfolio": payload.get("social_links", {}).get("portfolio", existing_data.get("social_links", {}).get("portfolio", ""))
+        },
+        "experience": payload.get("experience", existing_data.get("experience", [])),
+        "education": payload.get("education", existing_data.get("education", []))
+    }
+    
+    # Update user's bio with JSON data
+    updated = update_user_profile(g.current_user.id, {"bio": json.dumps(updated_data)})
+    
+    return jsonify({
+        "message": "Extended profile updated successfully",
+        "data": updated_data
+    }), 200
+
+
+@user_bp.route("/profile/experience", methods=["POST"])
+@require_auth
+def add_experience():
+    """Add a work experience entry"""
+    payload = request.get_json(silent=True) or {}
+    
+    required_fields = ["title", "company"]
+    if not all(field in payload for field in required_fields):
+        raise ValidationError("Title and company are required")
+    
+    user = get_user_by_id(g.current_user.id)
+    current_bio = user.bio or "{}"
+    
+    # Parse existing data
+    existing_data = {}
+    original_bio_text = current_bio
+    
+    try:
+        if current_bio and current_bio.startswith('{'):
+            existing_data = json.loads(current_bio)
+            original_bio_text = existing_data.get("original_bio", current_bio)
+    except json.JSONDecodeError:
+        original_bio_text = current_bio
+        existing_data = {"original_bio": original_bio_text}
+    
+    # Create new experience item
+    new_experience = {
+        "id": str(datetime.now().timestamp()),
+        "title": payload["title"],
+        "company": payload["company"],
+        "duration": payload.get("duration", ""),
+        "description": payload.get("description", "")
+    }
+    
+    # Add to existing experiences
+    experiences = existing_data.get("experience", [])
+    experiences.append(new_experience)
+    existing_data["experience"] = experiences
+    existing_data["original_bio"] = original_bio_text
+    
+    # Update user profile
+    update_user_profile(g.current_user.id, {"bio": json.dumps(existing_data)})
+    
+    return jsonify(new_experience), 201
+
+
+@user_bp.route("/profile/experience/<string:exp_id>", methods=["DELETE"])
+@require_auth
+def delete_experience(exp_id: str):
+    """Delete a work experience entry"""
+    user = get_user_by_id(g.current_user.id)
+    current_bio = user.bio or "{}"
+    
+    # Parse existing data
+    existing_data = {}
+    original_bio_text = current_bio
+    
+    try:
+        if current_bio and current_bio.startswith('{'):
+            existing_data = json.loads(current_bio)
+            original_bio_text = existing_data.get("original_bio", current_bio)
+    except json.JSONDecodeError:
+        original_bio_text = current_bio
+        existing_data = {"original_bio": original_bio_text}
+    
+    # Remove the experience
+    experiences = existing_data.get("experience", [])
+    filtered_experiences = [exp for exp in experiences if exp.get("id") != exp_id]
+    existing_data["experience"] = filtered_experiences
+    existing_data["original_bio"] = original_bio_text
+    
+    # Update user profile
+    update_user_profile(g.current_user.id, {"bio": json.dumps(existing_data)})
+    
+    return "", 204
+
+
+@user_bp.route("/profile/education", methods=["POST"])
+@require_auth
+def add_education():
+    """Add an education entry"""
+    payload = request.get_json(silent=True) or {}
+    
+    required_fields = ["institution", "degree"]
+    if not all(field in payload for field in required_fields):
+        raise ValidationError("Institution and degree are required")
+    
+    user = get_user_by_id(g.current_user.id)
+    current_bio = user.bio or "{}"
+    
+    # Parse existing data
+    existing_data = {}
+    original_bio_text = current_bio
+    
+    try:
+        if current_bio and current_bio.startswith('{'):
+            existing_data = json.loads(current_bio)
+            original_bio_text = existing_data.get("original_bio", current_bio)
+    except json.JSONDecodeError:
+        original_bio_text = current_bio
+        existing_data = {"original_bio": original_bio_text}
+    
+    # Create new education item
+    new_education = {
+        "id": str(datetime.now().timestamp()),
+        "institution": payload["institution"],
+        "degree": payload["degree"],
+        "field": payload.get("field", ""),
+        "year": payload.get("year", "")
+    }
+    
+    # Add to existing education
+    education = existing_data.get("education", [])
+    education.append(new_education)
+    existing_data["education"] = education
+    existing_data["original_bio"] = original_bio_text
+    
+    # Update user profile
+    update_user_profile(g.current_user.id, {"bio": json.dumps(existing_data)})
+    
+    return jsonify(new_education), 201
+
+
+@user_bp.route("/profile/education/<string:edu_id>", methods=["DELETE"])
+@require_auth
+def delete_education(edu_id: str):
+    """Delete an education entry"""
+    user = get_user_by_id(g.current_user.id)
+    current_bio = user.bio or "{}"
+    
+    # Parse existing data
+    existing_data = {}
+    original_bio_text = current_bio
+    
+    try:
+        if current_bio and current_bio.startswith('{'):
+            existing_data = json.loads(current_bio)
+            original_bio_text = existing_data.get("original_bio", current_bio)
+    except json.JSONDecodeError:
+        original_bio_text = current_bio
+        existing_data = {"original_bio": original_bio_text}
+    
+    # Remove the education
+    education = existing_data.get("education", [])
+    filtered_education = [edu for edu in education if edu.get("id") != edu_id]
+    existing_data["education"] = filtered_education
+    existing_data["original_bio"] = original_bio_text
+    
+    # Update user profile
+    update_user_profile(g.current_user.id, {"bio": json.dumps(existing_data)})
+    
+    return "", 204
 
 
 @user_bp.route("/gig-history", methods=["GET"])
