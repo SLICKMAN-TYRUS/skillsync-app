@@ -1,10 +1,26 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+let AsyncStorage;
+try {
+  // Try native async storage (mobile)
+  AsyncStorage = require('@react-native-async-storage/async-storage').default;
+} catch (e) {
+  // Fallback for web preview using localStorage
+  /* eslint-disable no-undef */
+  AsyncStorage = {
+    getItem: async (k) => (typeof window !== 'undefined' ? window.localStorage.getItem(k) : null),
+    setItem: async (k, v) => (typeof window !== 'undefined' ? window.localStorage.setItem(k, v) : null),
+    removeItem: async (k) => (typeof window !== 'undefined' ? window.localStorage.removeItem(k) : null),
+    multiRemove: async (keys) => (typeof window !== 'undefined' ? keys.forEach((k) => window.localStorage.removeItem(k)) : null),
+  };
+}
+
 import { firebaseAuth } from './firebaseConfig';
 
 // Create axios instance with default config
+// Prefer an explicit BACKEND_URL environment variable (set when running Expo or in CI)
+const DEFAULT_BACKEND = process.env.BACKEND_URL || process.env.MOCK_API_URL || 'http://localhost:4000/api';
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Replace with your API base URL
+  baseURL: DEFAULT_BACKEND,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -134,6 +150,25 @@ const adminApi = {
   getSystemLogs: (params) => api.get('/admin/system-logs', { params }),
 };
 
+// Development helpers (routes & locations) used by frontend screens when backend is not available
+const fetchRoutes = async () => {
+  try {
+    const response = await api.get('/routes');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to fetch routes' };
+  }
+};
+
+const fetchLocations = async () => {
+  try {
+    const response = await api.get('/locations');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to fetch locations' };
+  }
+};
+
 export {
   api as default,
   login,
@@ -142,4 +177,6 @@ export {
   studentApi,
   providerApi,
   adminApi,
+  fetchRoutes,
+  fetchLocations,
 };

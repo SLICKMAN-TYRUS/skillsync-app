@@ -1,11 +1,12 @@
+import 'react-native-gesture-handler';
 import React from 'react';
-import { registerRootComponent } from 'expo';
-import './styles.css';
-import SkillSyncApp from './components/SkillSyncApp';
+import { NavigationContainer } from '@react-navigation/native';
+import AppNavigator from './frontendScreens/navigation/AppNavigator';
 
-function App() {
-	return <SkillSyncApp />;
+export default function App() {
+	return (
+		<NavigationContainer>
+			<AppNavigator />
+		</NavigationContainer>
+	);
 }
-
-// Expo-friendly entry that works on native and web
-registerRootComponent(App);

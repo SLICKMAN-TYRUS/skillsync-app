@@ -62,3 +62,5 @@ api_test_commands.sh
 
 # Firebase credentials
 firebase_credentials.json
+# Backend-specific Firebase credentials (do not commit)
+backend/firebase_credentials.json

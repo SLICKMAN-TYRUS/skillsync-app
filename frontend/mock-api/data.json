@@ -1,0 +1,110 @@
+{
+  "users": [
+    {
+      "id": "admin-1",
+      "role": "Admin",
+      "name": "Admin User",
+      "email": "admin@skillsync.test"
+    },
+    {
+      "id": "prov-1",
+      "role": "Provider",
+      "name": "Alice Provider",
+      "email": "alice@provider.test",
+      "avatar": "",
+      "phone": "+250788000001"
+    },
+    {
+      "id": "prov-2",
+      "role": "Provider",
+      "name": "Bob Builder",
+      "email": "bob@provider.test",
+      "avatar": "",
+      "phone": "+250788000002"
+    },
+    {
+      "id": "stu-1",
+      "role": "Student",
+      "name": "Charlie Student",
+      "email": "charlie@student.test",
+      "avatar": "",
+      "phone": "+250788000010"
+    },
+    {
+      "id": "stu-2",
+      "role": "Student",
+      "name": "Dana Student",
+      "email": "dana@student.test",
+      "avatar": "",
+      "phone": "+250788000011"
+    }
+  ],
+  "gigs": [
+    {
+      "id": "g1",
+      "title": "Math Tutoring (GCSE)",
+      "description": "Help with algebra and calculus",
+      "providerId": "prov-1",
+      "price": 15,
+      "currency": "USD",
+      "location": "Kimironko",
+      "createdAt": "2025-11-16T22:33:32.758Z",
+      "status": "Published"
+    },
+    {
+      "id": "g2",
+      "title": "Logo & Brand Kit",
+      "description": "Design a logo and brand assets",
+      "providerId": "prov-2",
+      "price": 80,
+      "currency": "USD",
+      "location": "Kacyiru",
+      "createdAt": "2025-11-16T22:33:32.769Z",
+      "status": "Published"
+    }
+  ],
+  "applications": [
+    {
+      "id": "a1",
+      "gigId": "g1",
+      "studentId": "stu-1",
+      "resumeUrl": "",
+      "status": "pending",
+      "createdAt": "2025-11-16T22:33:32.769Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "n1",
+      "userId": "prov-1",
+      "type": "application",
+      "message": "Charlie applied to Math Tutoring",
+      "data": {
+        "applicationId": "a1"
+      },
+      "read": false,
+      "createdAt": "2025-11-16T22:33:32.769Z"
+    },
+    {
+      "id": "n2",
+      "userId": "admin-1",
+      "type": "new_gig",
+      "message": "New gig posted: Math Tutoring",
+      "data": {
+        "gigId": "g1"
+      },
+      "read": false,
+      "createdAt": "2025-11-16T22:33:32.769Z"
+    }
+  ],
+  "uploads": [],
+  "messages": [
+    {
+      "id": "m1",
+      "threadId": "general",
+      "senderId": "admin-1",
+      "text": "Welcome to SkillSync general chat!",
+      "createdAt": "2025-11-16T22:33:32.769Z"
+    }
+  ]
+}
