@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api } from '../../services/api';
+import HeaderBack from '../../components/HeaderBack';
 import firestoreAdapter from '../../services/firestoreAdapter';
 
 const ApproveGigsScreen = () => {
@@ -18,7 +19,7 @@ const ApproveGigsScreen = () => {
 
   const fetchPendingGigs = async () => {
     try {
-      const response = await api.get('/admin/pending-gigs');
+      const response = await api.get('/admin/gigs/pending');
       setGigs(response.data);
     } catch (error) {
       console.warn('API pending gigs fetch failed, falling back to Firestore:', error?.message || error);
@@ -117,6 +118,7 @@ const ApproveGigsScreen = () => {
 
   return (
     <View style={styles.container}>
+      <HeaderBack title="Approve Gigs" backTo="AdminDashboard" />
       <FlatList
         data={gigs}
         renderItem={renderGigItem}

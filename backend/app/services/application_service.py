@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Dict, List
 from .. import db
 from ..models import Application, Gig
+from ..models import User
+from . import notification_service as _notification_service
 from .exceptions import AuthorizationError, NotFoundError, ValidationError
 from .gig_service import get_gig_by_id
 
@@ -20,6 +22,20 @@ def create_application(student_id: int, gig_id: int, notes: str = "") -> Applica
     )
     db.session.add(application)
     db.session.commit()
+
+    # Notify admins about new application (service-level so seeder triggers it)
+    try:
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            _notification_service.create_notification_with_preferences(
+                user_id=admin.id,
+                type='application_submitted',
+                title='New application submitted',
+                message=f"A new application was submitted for '{gig.title}'.",
+                related_ids={'gig_id': gig_id, 'application_id': application.id},
+            )
+    except Exception:
+        pass
     return application
 
 

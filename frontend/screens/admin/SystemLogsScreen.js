@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api } from '../../services/api';
+import HeaderBack from '../../components/HeaderBack';
 
 const SystemLogsScreen = () => {
   const [logs, setLogs] = useState([]);
@@ -19,10 +20,10 @@ const SystemLogsScreen = () => {
 
   const fetchLogs = async () => {
     try {
-      const response = await api.get('/admin/system-logs', {
+      const response = await api.get('/admin/audit-logs', {
         params: { filter, search: searchQuery },
       });
-      setLogs(response.data);
+      setLogs(response.data.items || response.data || []);
     } catch (error) {
       console.error('Error fetching system logs:', error);
     } finally {
@@ -98,6 +99,7 @@ const SystemLogsScreen = () => {
 
   return (
     <View style={styles.container}>
+      <HeaderBack title="System Logs" backTo="AdminDashboard" />
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Icon name="search" size={24} color="#666666" />

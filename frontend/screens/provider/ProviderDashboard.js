@@ -13,6 +13,7 @@ import { api } from '../../services/api';
 import firestoreAdapter from '../../services/firestoreAdapter';
 import { firebaseAuth } from '../../services/firebaseConfig';
 import RatingStars from '../../components/RatingStars';
+import HeaderBack from '../../components/HeaderBack';
 
 const ProviderDashboard = ({ navigation }) => {
   const [stats, setStats] = useState({
@@ -30,9 +31,16 @@ const ProviderDashboard = ({ navigation }) => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/provider/dashboard');
-      setStats(response.data.stats);
-      setEarningsData(response.data.earningsData);
+      const response = await api.get('/gigs/my-gigs');
+      // Transform the response to match expected dashboard format
+      const gigs = response.data || [];
+      setStats({
+        totalGigs: gigs.length,
+        activeGigs: gigs.filter(g => g.status === 'open').length,
+        completedGigs: gigs.filter(g => g.status === 'closed').length,
+        totalEarnings: gigs.reduce((sum, g) => sum + (g.compensation || 0), 0),
+      });
+      // Optionally set earnings data if needed
     } catch (error) {
       console.warn('API dashboard fetch failed, falling back to Firestore:', error?.message || error);
       try {
@@ -91,6 +99,7 @@ const ProviderDashboard = ({ navigation }) => {
         <RefreshControl refreshing={refreshing} onRefresh={fetchDashboardData} />
       }
     >
+      <HeaderBack title="Provider Dashboard" />
       <View style={styles.header}>
         <Text style={styles.welcomeText}>Welcome back!</Text>
         <View style={styles.ratingContainer}>

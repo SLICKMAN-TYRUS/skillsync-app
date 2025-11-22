@@ -11,47 +11,47 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
-import { fetchRoutes, providerApi } from '../../services/api';
-
-const sampleGigs = [
-  { id: '1', title: 'Graphic Design for Marketing', status: 'Assigned', applicants: 3 },
-  { id: '2', title: 'Website Development', status: 'Completed', applicants: 5 },
-  { id: '3', title: 'Social Media Strategy', status: 'Available', applicants: 2 },
-];
+import { providerApi } from '../../services/api';
 
 export default function ProviderDashboardScreen() {
   const navigation = useNavigation();
   const [routes, setRoutes] = useState([]);
-  const [gigs] = useState(sampleGigs);
+  const [gigs, setGigs] = useState([]);
   const [openContracts, setOpenContracts] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const all = await fetchRoutes();
+        setLoading(true);
+        // Fetch provider's gigs from backend
+        const gigsData = await providerApi.getGigs();
         if (!mounted) return;
-        if (all && all.Provider) setRoutes(all.Provider);
-        // fetch provider dashboard counts from mock API (runs on localhost:4000)
-        try {
-          const resp = await fetch('http://localhost:4000/api/provider/dashboard');
-          const dash = await resp.json();
-          if (dash) setOpenContracts(dash.openContracts || 0);
-        } catch (err) {
-          // ignore if mock API not available
-        }
+        setGigs(Array.isArray(gigsData) ? gigsData : []);
+        const gigsArray = Array.isArray(gigsData) ? gigsData : [];
+        setOpenContracts(gigsArray.filter((g) => (g.status || '').toLowerCase() === 'open').length);
       } catch (e) {
-        console.warn('Failed to fetch routes', e);
+        console.error('Failed to fetch provider gigs', e);
+        setError('Unable to load your gigs. Please try again soon.');
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
   }, []);
 
   const renderStatusBadge = (status) => {
-    const color = status === 'Completed' ? '#4CAF50' : status === 'Assigned' ? '#FF9800' : '#2196F3';
+    const normalized = (status || '').toLowerCase();
+    const color = normalized === 'completed'
+      ? '#4CAF50'
+      : normalized === 'assigned' || normalized === 'in_progress'
+        ? '#FF9800'
+        : '#2196F3';
     return (
       <View style={[styles.statusBadge, { backgroundColor: color }]}> 
-        <Text style={styles.statusText}>{status}</Text>
+        <Text style={styles.statusText}>{status || 'open'}</Text>
       </View>
     );
   };
@@ -76,7 +76,7 @@ export default function ProviderDashboardScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.statsRow}>
+          <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: '#EAF6FF' }]}>
             <Icon name="work" size={28} color="#0b72b9" />
             <Text style={styles.statValue}>{gigs.length}</Text>
@@ -95,6 +95,7 @@ export default function ProviderDashboardScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Your Gigs</Text>
+        {error ? <Text style={{ color: '#c53030', marginBottom: 12 }}>{error}</Text> : null}
         {gigs.map((gig) => (
           <View key={gig.id} style={styles.gigCard}>
             <View style={styles.gigLeft}>
@@ -106,7 +107,7 @@ export default function ProviderDashboardScreen() {
               <Text style={styles.gigTitle}>{gig.title}</Text>
               <View style={styles.rowBetween}>
                 {renderStatusBadge(gig.status)}
-                <Text style={styles.smallTextDark}>{gig.applicants} applicants</Text>
+                <Text style={styles.smallTextDark}>{gig.application_count || 0} applicants</Text>
               </View>
               <View style={styles.gigActions}>
                 <TouchableOpacity style={styles.actionIcon} onPress={() => navigation.navigate('ReviewApplications', { gigId: gig.id })}>

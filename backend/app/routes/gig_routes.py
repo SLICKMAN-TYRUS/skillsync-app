@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, g, request
 
-from ..models import Application, SavedGig
+from ..models import Application, SavedGig, User
 from ..services import notification_service
 from ..services.application_service import get_gig_applications
 from ..services.exceptions import AuthorizationError, NotFoundError, ValidationError
@@ -112,6 +112,21 @@ def create_gig_endpoint():
     payload = request.get_json(silent=True) or {}
     _validate_gig_payload(payload)
     gig = create_gig(g.current_user.id, payload)
+    # Notify admins that a new gig is pending approval
+    try:
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            # Respect user preferences when possible
+            notification_service.create_notification_with_preferences(
+                user_id=admin.id,
+                type="gig_pending",
+                title="New gig pending approval",
+                message=f"A new gig '{gig.title}' has been posted and is awaiting approval.",
+                related_ids={"gig_id": gig.id},
+            )
+    except Exception:
+        # Don't fail gig creation if notifications fail
+        pass
     return jsonify(gig_to_dict(gig)), 201
 
 

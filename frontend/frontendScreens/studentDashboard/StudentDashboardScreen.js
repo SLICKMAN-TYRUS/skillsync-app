@@ -4,13 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 import ErrorBanner from '../../components/ErrorBanner';
 import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
-import { fetchRoutes } from '../../services/api';
+import { studentApi } from '../../services/api';
 import { useEffect, useState } from 'react';
 
 export default function StudentDashboardScreen() {
   const navigation = useNavigation();
   const [routes, setRoutes] = useState([]);
   const [error, setError] = useState('');
+  const [applicationCount, setApplicationCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const navigateTo = (screen) => {
     navigation.navigate(screen);
@@ -20,11 +22,16 @@ export default function StudentDashboardScreen() {
     let mounted = true;
     (async () => {
       try {
-        const all = await fetchRoutes();
+        setLoading(true);
+        // Fetch student's applications to show count
+        const apps = await studentApi.getMyApplications();
         if (!mounted) return;
-        if (all && all.Student) setRoutes(all.Student);
+        const appsList = Array.isArray(apps) ? apps : (apps.items || []);
+        setApplicationCount(appsList.length);
       } catch (e) {
-        console.warn('Failed to fetch routes', e);
+        console.warn('Failed to fetch applications', e);
+      } finally {
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
@@ -38,7 +45,7 @@ export default function StudentDashboardScreen() {
       <ErrorBanner message={error} onClose={() => setError('')} />
       <View style={styles.grid}>
         <IconButton icon={<Ionicons name="briefcase-outline" size={28} color="#0077cc" />} label="Browse Gigs" onPress={() => navigateTo('GigsScreen')} />
-        <IconButton icon={<Ionicons name="document-text-outline" size={28} color="#0077cc" />} label="My Applications" onPress={() => navigateTo('ApplicationConfirmationScreen')} />
+        <IconButton icon={<Ionicons name="document-text-outline" size={28} color="#0077cc" />} label="My Applications" onPress={() => navigateTo('MyApplicationsScreen')} />
         <IconButton icon={<Ionicons name="chatbox-outline" size={28} color="#0077cc" />} label="Inbox" onPress={() => navigateTo('InboxScreen')} />
         <IconButton icon={<Ionicons name="notifications-outline" size={28} color="#0077cc" />} label="Notifications" onPress={() => navigateTo('NotificationsScreen')} />
         <IconButton icon={<Ionicons name="checkmark-done-outline" size={28} color="#0077cc" />} label="Completed" onPress={() => navigateTo('CompletedGigsScreen')} />
@@ -48,7 +55,13 @@ export default function StudentDashboardScreen() {
       </View>
 
       <DashboardSection title="Quick Summary">
-        <Text style={styles.placeholder}>No active applications yet. Start browsing gigs and apply with confidence.</Text>
+        {loading ? (
+          <Text style={styles.placeholder}>Loading your applications...</Text>
+        ) : applicationCount > 0 ? (
+          <Text style={styles.placeholder}>You have {applicationCount} application{applicationCount !== 1 ? 's' : ''}. Check their status in "My Applications".</Text>
+        ) : (
+          <Text style={styles.placeholder}>No active applications yet. Start browsing gigs and apply with confidence.</Text>
+        )}
       </DashboardSection>
     </ScrollView>
   );

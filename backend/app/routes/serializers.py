@@ -19,8 +19,50 @@ def user_to_dict(user, include_email: bool = False) -> dict:
 
 def gig_to_dict(gig, include_provider: bool = True) -> dict:
     data = gig.to_dict()
-    if include_provider and getattr(gig, "provider", None):
-        data["provider"] = user_to_dict(gig.provider, include_email=False)
+
+    provider_obj = getattr(gig, "provider", None)
+    if include_provider and provider_obj:
+        data["provider"] = user_to_dict(provider_obj, include_email=False)
+
+    data["provider_name"] = provider_obj.name if provider_obj else None
+    data["provider_profile_photo"] = (
+        provider_obj.profile_photo if provider_obj else None
+    )
+    data["provider_average_rating"] = (
+        float(provider_obj.average_rating or 0.0) if provider_obj else 0.0
+    )
+
+    ratings_rel = getattr(gig, "ratings", None)
+    rating_items = []
+    if ratings_rel is not None:
+        try:
+            rating_items = ratings_rel.all()
+        except AttributeError:
+            rating_items = ratings_rel
+    rating_scores = [rating.score for rating in rating_items if rating.score is not None]
+    if rating_scores:
+        data["rating_average"] = round(sum(rating_scores) / len(rating_scores), 2)
+        data["rating_count"] = len(rating_scores)
+    else:
+        data["rating_average"] = 0.0
+        data["rating_count"] = 0
+
+    applications_rel = getattr(gig, "applications", None)
+    application_count = 0
+    if applications_rel is not None:
+        if hasattr(applications_rel, "count"):
+            application_count = applications_rel.count()
+        else:
+            application_count = len(applications_rel)
+    data["application_count"] = application_count
+
+    data["price"] = data.get("budget")
+    data["duration_label"] = None
+    if gig.deadline:
+        data["deadline_display"] = gig.deadline.strftime("%b %d, %Y")
+        data["duration_label"] = f"Due {data['deadline_display']}"
+    else:
+        data["deadline_display"] = None
     return data
 
 

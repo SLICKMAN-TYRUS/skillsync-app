@@ -1,67 +1,75 @@
 // screens/CompletedGigsScreen.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import ErrorBanner from '../../components/ErrorBanner';
+import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
-
-const completedGigs = [
-  {
-    id: '1',
-    title: 'Graphic Design for Marketing',
-    provider: 'Aline Mukamana',
-    date: 'Oct 28, 2025',
-    rated: false,
-  },
-  {
-    id: '2',
-    title: 'Website Development',
-    provider: 'Eric Nkurunziza',
-    date: 'Sep 15, 2025',
-    rated: true,
-  },
-  {
-    id: '3',
-    title: 'Social Media Strategy',
-    provider: 'Sandrine Uwizeye',
-    date: 'Aug 30, 2025',
-    rated: false,
-  },
-];
+import { studentApi } from '../services/api';
 
 export default function CompletedGigsScreen() {
   const navigation = useNavigation();
   const [error, setError] = useState('');
+  const [completed, setCompleted] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const apps = await studentApi.getMyApplications();
+        if (!mounted) return;
+        const list = Array.isArray(apps) ? apps : (apps.items || []);
+        const completedApps = list.filter((app) => (app.status || '').toLowerCase() === 'completed');
+        setCompleted(completedApps);
+      } catch (err) {
+        console.error('Failed to load completed gigs', err);
+        if (mounted) setError(err?.message || 'Failed to load completed gigs');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-  <HeaderBack title="Completed Gigs" backTo="StudentDashboard" />
-  <ErrorBanner message={error} onClose={() => setError('')} />
-  <Text style={styles.header}>Completed Gigs</Text>
+        <HeaderBack title="Completed Gigs" backTo="StudentDashboard" />
+        <ErrorBanner message={error} onClose={() => setError('')} />
+        <Text style={styles.header}>Completed Gigs</Text>
 
-        {completedGigs.map((gig) => (
-          <View key={gig.id} style={styles.card}>
-            <Text style={styles.title}>{gig.title}</Text>
-            <Text style={styles.meta}>Provider: {gig.provider}</Text>
-            <Text style={styles.meta}>Completed: {gig.date}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#0077cc" style={{ marginTop: 24 }} />
+        ) : completed.length === 0 ? (
+          <Text style={{ textAlign: 'center', color: '#555' }}>You have not completed any gigs yet.</Text>
+        ) : (
+          completed.map((item) => {
+            const gig = item.gig || {};
+            const completedDate = item.updated_at || item.selected_at || item.applied_at;
+            return (
+              <View key={gig.id || item.id} style={styles.card}>
+                <Text style={styles.title}>{gig.title}</Text>
+                <Text style={styles.meta}>Provider: {gig.provider_name || gig.provider?.name || 'Provider'}</Text>
+                <Text style={styles.meta}>
+                  Completed: {completedDate ? new Date(completedDate).toDateString() : 'Date unavailable'}
+                </Text>
 
-            {gig.rated ? (
-              <Text style={styles.rated}>✅ Provider Rated</Text>
-            ) : (
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() =>
-                  navigation.navigate('RateProviderScreen', {
-                    providerId: gig.provider,
-                    gigTitle: gig.title,
-                  })
-                }
-              >
-                <Text style={styles.buttonText}>Rate Provider</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() =>
+                    navigation.navigate('RateProviderScreen', {
+                      providerId: gig.provider_id,
+                      gigTitle: gig.title,
+                    })
+                  }
+                >
+                  <Text style={styles.buttonText}>Rate Provider</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
       </View>
     </ScrollView>
   );

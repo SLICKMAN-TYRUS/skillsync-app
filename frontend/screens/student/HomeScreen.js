@@ -10,8 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import GigCard from '../../components/GigCard';
-import { api } from '../../services/api';
-import { fetchGigs } from '../../services/firestoreAdapter';
+import { studentApi } from '../../services/api';
 
 const HomeScreen = ({ navigation }) => {
   const [gigs, setGigs] = useState([]);
@@ -26,36 +25,32 @@ const HomeScreen = ({ navigation }) => {
     { id: 'assistant', label: 'Research', icon: 'search' },
   ];
 
-  const fetchGigs = async () => {
+  const loadGigs = async () => {
     try {
-      // Prefer Firestore adapter for demo data when available
-      const data = await fetchGigs({ category: selectedCategory, search: searchQuery });
-      setGigs(data);
-    } catch (error) {
-      console.error('Error fetching gigs from Firestore adapter:', error);
-      // fallback to REST API
-      try {
-        const response = await api.get('/student/gigs', {
-          params: {
-            category: selectedCategory !== 'all' ? selectedCategory : undefined,
-            search: searchQuery,
-          },
-        });
-        setGigs(response.data);
-      } catch (err) {
-        console.error('Error fetching gigs via API fallback:', err);
-      }
+      const response = await studentApi.getGigs({
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        search: searchQuery,
+      });
+      setGigs(response.data.items || response.data || []);
+    } catch (err) {
+      console.error('Error fetching gigs:', err);
+      setGigs([]);
     } finally {
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchGigs();
-  }, [selectedCategory]);
+    loadGigs();
+  }, [selectedCategory, searchQuery]);
 
   const handleSearch = () => {
-    fetchGigs();
+    loadGigs();
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadGigs();
   };
 
   const handleGigPress = (gig) => {

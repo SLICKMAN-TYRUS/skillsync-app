@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RoleBadge from '../../components/RoleBadge';
+import HeaderBack from '../../components/HeaderBack';
 import { api } from '../../services/api';
 import { fetchUserProfile } from '../../services/firestoreAdapter';
 import { firebaseAuth } from '../../services/firebaseConfig';
@@ -33,7 +34,7 @@ const ProfileScreen = () => {
       if (data) {
         setProfile(data);
       } else {
-        const response = await api.get('/student/profile');
+        const response = await api.get('/users/profile');
         setProfile(response.data);
       }
     } catch (error) {
@@ -92,6 +93,7 @@ const ProfileScreen = () => {
         <RefreshControl refreshing={refreshing} onRefresh={fetchProfile} />
       }
     >
+      <HeaderBack title="Profile" backTo="Home" />
       <View style={styles.header}>
         <View style={styles.profileInfo}>
           {profile.avatar ? (

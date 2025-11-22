@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, g, request
 
 from ..services import notification_service
+from ..models import User
 from ..services.application_service import (
     bulk_update_applications,
     create_application,
@@ -33,6 +34,19 @@ def apply_to_gig():
     notification_service.notify_application_received(
         gig.provider_id, gig_id, application.id
     )
+    # Also notify admins about a new application (non-fatal)
+    try:
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            notification_service.create_notification_with_preferences(
+                user_id=admin.id,
+                type='application_submitted',
+                title='New application submitted',
+                message=f"A new application was submitted for '{gig.title}'.",
+                related_ids={'gig_id': gig_id, 'application_id': application.id},
+            )
+    except Exception:
+        pass
     return (
         jsonify(application_to_dict(application, include_gig=True)),
         201,

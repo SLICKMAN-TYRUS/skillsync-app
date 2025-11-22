@@ -15,10 +15,18 @@ try {
 }
 
 import { firebaseAuth } from './firebaseConfig';
+import { getDevAuthHeader } from './devAuth';
 
 // Create axios instance with default config
 // Prefer an explicit BACKEND_URL environment variable (set when running Expo or in CI)
-const DEFAULT_BACKEND = process.env.BACKEND_URL || process.env.MOCK_API_URL || 'http://localhost:4000/api';
+const DEFAULT_BACKEND = process.env.REACT_APP_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:5000/api';
+
+// Debug: log the backend URL being used
+if (typeof window !== 'undefined') {
+  console.log('API Backend URL:', DEFAULT_BACKEND);
+  console.log('ENV REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
+}
+
 const api = axios.create({
   baseURL: DEFAULT_BACKEND,
   timeout: 10000,
@@ -30,6 +38,17 @@ const api = axios.create({
 // Request interceptor for API calls
 api.interceptors.request.use(
   async (config) => {
+    // Dev override: if a dev test auth header is configured, use it immediately.
+    try {
+      const devHeader = getDevAuthHeader();
+      if (devHeader) {
+        config.headers.Authorization = devHeader;
+        return config;
+      }
+    } catch (e) {
+      // ignore dev auth failures and continue normal auth flow
+    }
+
     let token = await AsyncStorage.getItem('auth_token');
     // If no token in storage, try to get a fresh ID token from Firebase Auth
     try {
@@ -115,39 +134,39 @@ const handleLogout = async () => {
 
 // Student API calls
 const studentApi = {
-  getGigs: (params) => api.get('/student/gigs', { params }),
-  getGigDetails: (gigId) => api.get(`/student/gigs/${gigId}`),
-  applyToGig: (gigId, data) => api.post(`/student/gigs/${gigId}/apply`, data),
-  getApplications: (params) => api.get('/student/applications', { params }),
-  getProfile: () => api.get('/student/profile'),
-  updateProfile: (data) => api.patch('/student/profile', data),
+  getGigs: (params) => api.get('/gigs', { params }),
+  getGigDetails: (gigId) => api.get(`/gigs/${gigId}`),
+  applyToGig: (gigId, data) => api.post(`/applications`, { ...data, gig_id: gigId }),
+  getApplications: (params) => api.get('/applications/my-applications', { params }),
+  getProfile: () => api.get('/auth/me'),
+  updateProfile: (data) => api.patch('/users/me', data),
 };
 
 // Provider API calls
 const providerApi = {
-  getDashboard: () => api.get('/provider/dashboard'),
-  getGigs: (params) => api.get('/provider/gigs', { params }),
-  createGig: (data) => api.post('/provider/gigs', data),
-  updateGig: (gigId, data) => api.patch(`/provider/gigs/${gigId}`, data),
-  deleteGig: (gigId) => api.delete(`/provider/gigs/${gigId}`),
-  getApplications: (params) => api.get('/provider/applications', { params }),
+  getDashboard: () => api.get('/auth/me'),
+  getGigs: (params) => api.get('/gigs/my-gigs', { params }),
+  createGig: (data) => api.post('/gigs', data),
+  updateGig: (gigId, data) => api.put(`/gigs/${gigId}`, data),
+  deleteGig: (gigId) => api.delete(`/gigs/${gigId}`),
+  getApplications: (params) => api.get('/applications/my-applications', { params }),
   updateApplication: (applicationId, data) =>
-    api.patch(`/provider/applications/${applicationId}`, data),
-  getRatings: () => api.get('/provider/ratings'),
+    api.patch(`/applications/${applicationId}`, data),
+  getRatings: () => api.get('/ratings'),
 };
 
 // Admin API calls
 const adminApi = {
-  getDashboard: () => api.get('/admin/dashboard'),
-  getPendingGigs: () => api.get('/admin/pending-gigs'),
-  approveGig: (gigId) => api.post(`/admin/gigs/${gigId}/approve`),
-  rejectGig: (gigId) => api.post(`/admin/gigs/${gigId}/reject`),
+  getDashboard: () => api.get('/admin/analytics/overview'),
+  getPendingGigs: () => api.get('/admin/gigs/pending'),
+  approveGig: (gigId) => api.patch(`/admin/gigs/${gigId}/approve`),
+  rejectGig: (gigId) => api.patch(`/admin/gigs/${gigId}/reject`),
   getUsers: (params) => api.get('/admin/users', { params }),
   updateUserStatus: (userId, data) =>
     api.patch(`/admin/users/${userId}/status`, data),
   updateUserRole: (userId, data) =>
     api.patch(`/admin/users/${userId}/role`, data),
-  getSystemLogs: (params) => api.get('/admin/system-logs', { params }),
+  getSystemLogs: (params) => api.get('/admin/audit-logs', { params }),
 };
 
 // Development helpers (routes & locations) used by frontend screens when backend is not available
@@ -180,3 +199,6 @@ export {
   fetchRoutes,
   fetchLocations,
 };
+
+// Also provide a named export `api` for modules that import { api }
+export { api };

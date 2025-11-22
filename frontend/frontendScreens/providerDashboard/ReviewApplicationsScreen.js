@@ -1,20 +1,66 @@
 // screens/ReviewApplicationsScreen.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import HeaderBack from '../../components/HeaderBack';
-
-const applicants = [
-  { id: '1', name: 'Aline Mukamana', message: 'I’m excited to contribute to your campaign.' },
-  { id: '2', name: 'Eric Nkurunziza', message: 'Experienced in web development and ready to deliver.' },
-  { id: '3', name: 'Sandrine Uwizeye', message: 'Skilled in social media strategy and content planning.' },
-];
+import { providerApi } from '../services/api';
 
 export default function ReviewApplicationsScreen({ route }) {
   const { gigId } = route.params;
-  const [decisions, setDecisions] = useState({});
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [actionsPending, setActionsPending] = useState({});
+  const [error, setError] = useState('');
 
-  const handleDecision = (id, status) => {
-    setDecisions({ ...decisions, [id]: status });
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const apps = await providerApi.getApplicationsForGig(gigId);
+        if (!mounted) return;
+        setApplications(Array.isArray(apps) ? apps : (apps.items || []));
+      } catch (err) {
+        console.error('Failed to load applications', err);
+        setError(err?.message || 'Failed to load applications');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [gigId]);
+
+  const handleAction = (appId, action) => {
+    Alert.alert(
+      action === 'select' ? 'Accept application' : 'Reject application',
+      `Are you sure you want to ${action === 'select' ? 'accept' : 'reject'} this application?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: action === 'select' ? 'Accept' : 'Reject',
+          style: action === 'select' ? 'default' : 'destructive',
+          onPress: async () => {
+            setActionsPending((s) => ({ ...s, [appId]: true }));
+            const prev = applications.slice();
+            try {
+              if (action === 'select') {
+                await providerApi.selectApplication(appId);
+              } else {
+                await providerApi.rejectApplication(appId);
+              }
+              // Optimistically update UI: mark status for the application
+              setApplications((list) => list.map((a) => (a.id === appId ? { ...a, status: action === 'select' ? 'accepted' : 'rejected' } : a)));
+            } catch (err) {
+              console.error('Action failed', err);
+              setError(err?.message || 'Action failed');
+              setApplications(prev);
+            } finally {
+              setActionsPending((s) => ({ ...s, [appId]: false }));
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -22,35 +68,39 @@ export default function ReviewApplicationsScreen({ route }) {
       <View style={styles.container}>
         <HeaderBack title="Review Applications" backTo="ProviderDashboard" />
         <Text style={styles.header}>Review Applications</Text>
+        {loading && <ActivityIndicator size="large" color="#0077cc" />}
+        {error ? <Text style={{ color: '#c53030', textAlign: 'center' }}>{error}</Text> : null}
 
-        {applicants.map((applicant) => (
+        {applications.map((applicant) => (
           <View key={applicant.id} style={styles.card}>
-            <Text style={styles.name}>{applicant.name}</Text>
-            <Text style={styles.message}>{applicant.message}</Text>
+            <Text style={styles.name}>{applicant.student?.name || applicant.student_name || applicant.student_id}</Text>
+            <Text style={styles.message}>{applicant.notes || applicant.message || ''}</Text>
 
             <View style={styles.actions}>
               <TouchableOpacity
                 style={[
                   styles.button,
-                  decisions[applicant.id] === 'Accepted' && styles.accepted,
+                  applicant.status === 'accepted' && styles.accepted,
                 ]}
-                onPress={() => handleDecision(applicant.id, 'Accepted')}
+                disabled={actionsPending[applicant.id]}
+                onPress={() => handleAction(applicant.id, 'select')}
               >
-                <Text style={styles.buttonText}>Accept</Text>
+                <Text style={styles.buttonText}>{actionsPending[applicant.id] ? '...' : 'Accept'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.button,
-                  decisions[applicant.id] === 'Rejected' && styles.rejected,
+                  applicant.status === 'rejected' && styles.rejected,
                 ]}
-                onPress={() => handleDecision(applicant.id, 'Rejected')}
+                disabled={actionsPending[applicant.id]}
+                onPress={() => handleAction(applicant.id, 'reject')}
               >
-                <Text style={styles.buttonText}>Reject</Text>
+                <Text style={styles.buttonText}>{actionsPending[applicant.id] ? '...' : 'Reject'}</Text>
               </TouchableOpacity>
             </View>
 
-            {decisions[applicant.id] && (
-              <Text style={styles.status}>Status: {decisions[applicant.id]}</Text>
+            {applicant.status && (
+              <Text style={styles.status}>Status: {applicant.status}</Text>
             )}
           </View>
         ))}

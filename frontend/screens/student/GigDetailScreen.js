@@ -11,6 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RatingStars from '../../components/RatingStars';
 import RoleBadge from '../../components/RoleBadge';
+import HeaderBack from '../../components/HeaderBack';
 import { api } from '../../services/api';
 import { fetchGigById } from '../../services/firestoreAdapter';
 
@@ -78,6 +79,7 @@ const GigDetailScreen = ({ route, navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
+      <HeaderBack title="Gig Details" backTo="Home" />
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{gig.title}</Text>

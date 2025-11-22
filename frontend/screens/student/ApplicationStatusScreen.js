@@ -8,7 +8,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { api } from '../../services/api';
+import { studentApi } from '../../services/api';
+import HeaderBack from '../../components/HeaderBack';
 
 const ApplicationStatusScreen = () => {
   const [applications, setApplications] = useState([]);
@@ -17,12 +18,11 @@ const ApplicationStatusScreen = () => {
 
   const fetchApplications = async () => {
     try {
-      const response = await api.get('/student/applications', {
-        params: { status: filter },
-      });
-      setApplications(response.data);
+      const response = await studentApi.getApplications({ status: filter });
+      setApplications(response.data.items || response.data || []);
     } catch (error) {
       console.error('Error fetching applications:', error);
+      setApplications([]);
     } finally {
       setRefreshing(false);
     }
@@ -108,6 +108,7 @@ const ApplicationStatusScreen = () => {
 
   return (
     <View style={styles.container}>
+      <HeaderBack title="My Applications" backTo="Home" />
       <View style={styles.filters}>
         <FilterButton title="Pending" value="pending" />
         <FilterButton title="Accepted" value="accepted" />

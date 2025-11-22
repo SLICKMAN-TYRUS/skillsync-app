@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from sqlalchemy import and_, func, or_
 
 from .. import db
-from ..models import Application, AuditLog, Gig, Rating, User
+from ..models import Application, AuditLog, Gig, Rating, User, SavedGig
 from .exceptions import AuthorizationError, NotFoundError, ValidationError
 from .gig_service import get_gig_by_id
 from .notification_service import create_notification, notify_gig_approved
@@ -71,6 +71,28 @@ def approve_gig(gig_id: int, admin_id: int) -> Gig:
     )
 
     notify_gig_approved(gig.provider_id, gig_id)
+    # Notify impacted students (applicants + users who saved the gig)
+    try:
+        applicant_ids = {
+            student_id
+            for (student_id,) in Application.query.with_entities(Application.student_id)
+            .filter(Application.gig_id == gig_id)
+            .all()
+        }
+        saved_ids = {
+            user_id
+            for (user_id,) in SavedGig.query.with_entities(SavedGig.user_id)
+            .filter(SavedGig.gig_id == gig_id)
+            .all()
+        }
+        impacted = list(applicant_ids.union(saved_ids))
+        if impacted:
+            from . import notification_service as _notification_service
+
+            _notification_service.notify_gig_update(impacted, gig_id, "approved")
+    except Exception:
+        # Non-fatal: approval should succeed even if notifications fail
+        pass
     return gig
 
 

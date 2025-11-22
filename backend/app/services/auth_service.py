@@ -47,9 +47,16 @@ def verify_token(id_token: Optional[str]):
     if firebase_available:
         try:
             decoded = auth.verify_id_token(id_token)
-            custom_claims = decoded.get("custom_claims", {})
-            if "role" in custom_claims:
-                decoded["role"] = custom_claims["role"]
+            # Firebase ID tokens may have custom_claims or claims directly
+            # Try to extract role from custom claims if present
+            if "role" in decoded:
+                # Role is already at top level
+                pass
+            else:
+                # Check for role in nested locations
+                custom_claims = decoded.get("custom_claims") or decoded.get("claims") or {}
+                if "role" in custom_claims:
+                    decoded["role"] = custom_claims["role"]
             return decoded
         except Exception:
             return None

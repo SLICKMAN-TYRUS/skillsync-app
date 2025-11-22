@@ -3,6 +3,7 @@ from typing import Dict, Optional
 from sqlalchemy import desc, asc, and_, or_, func
 from .. import db
 from ..models import Gig, User, Application
+from . import notification_service as _notification_service
 from .exceptions import NotFoundError, ValidationError
 from .user_service import get_user_by_id
 
@@ -47,6 +48,20 @@ def create_gig(provider_id: int, gig_data: Dict) -> Gig:
 
     db.session.add(gig)
     db.session.commit()
+
+    # Notify admins that a new gig is pending approval (service-level so seed scripts trigger it)
+    try:
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            _notification_service.create_notification_with_preferences(
+                user_id=admin.id,
+                type="gig_pending",
+                title="New gig pending approval",
+                message=f"A new gig '{gig.title}' has been posted and is awaiting approval.",
+                related_ids={"gig_id": gig.id},
+            )
+    except Exception:
+        pass
     return gig
 
 

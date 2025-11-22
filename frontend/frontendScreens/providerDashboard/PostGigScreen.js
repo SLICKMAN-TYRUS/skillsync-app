@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { fetchLocations, providerApi } from '../../services/api';
+import { fetchLocations, providerApi } from '../services/api';
 import HeaderBack from '../../components/HeaderBack';
 import ErrorBanner from '../../components/ErrorBanner';
 const MOCK_API_BASE = 'http://localhost:4000';
@@ -11,7 +11,8 @@ export default function PostGigScreen({ navigation }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
-  const [date, setDate] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [deadlineDisplay, setDeadlineDisplay] = useState('');
   const [locations, setLocations] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [day, setDay] = useState(new Date().getDate());
@@ -106,7 +107,9 @@ export default function PostGigScreen({ navigation }) {
 
   const applyDate = () => {
     const d = new Date(year, month, day);
-    setDate(d.toDateString());
+    setDeadline(d.toISOString().split('T')[0]);
+    setDeadlineDisplay(d.toDateString());
+    setErrors((prev) => ({ ...prev, deadline: undefined }));
     setShowDatePicker(false);
   };
 
@@ -124,7 +127,7 @@ export default function PostGigScreen({ navigation }) {
             if (!title.trim()) e.title = 'Title is required';
             if (!category) e.category = 'Category is required';
             if (!location) e.location = 'Location is required';
-            if (!date) e.date = 'Date is required';
+            if (!deadline) e.deadline = 'Date is required';
             if (!price || Number.isNaN(Number(price))) e.price = 'Valid price is required';
             if (!duration.trim()) e.duration = 'Duration is required';
 
@@ -141,9 +144,9 @@ export default function PostGigScreen({ navigation }) {
                 title,
                 category,
                 location,
-                date,
+                deadline,
                 description,
-                price: Number(price),
+                budget: Number(price),
                 duration,
                 attachments,
                 currency,
@@ -212,9 +215,9 @@ export default function PostGigScreen({ navigation }) {
         </View>
 
         <TouchableOpacity style={[styles.input, styles.dateInput]} onPress={() => setShowDatePicker(true)}>
-          <Text style={{ color: date ? '#000' : '#999' }}>{date || 'Select Deadline / Task Date'}</Text>
+          <Text style={{ color: deadlineDisplay ? '#000' : '#999' }}>{deadlineDisplay || 'Select Deadline / Task Date'}</Text>
         </TouchableOpacity>
-        {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
+        {errors.deadline && <Text style={styles.errorText}>{errors.deadline}</Text>}
 
         <Modal visible={showDatePicker} transparent animationType="slide">
           <View style={styles.dateModalBackdrop}>

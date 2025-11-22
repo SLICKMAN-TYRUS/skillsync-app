@@ -1,7 +1,7 @@
 from typing import List, Dict
 from sqlalchemy import and_, or_, func
 from .. import db
-from ..models import Gig, User, StudentSkill, Application
+from ..models import Gig, User, StudentSkill, Application, Skill
 from .exceptions import ValidationError
 from .user_service import get_user_by_id
 
@@ -17,10 +17,15 @@ def get_recommended_gigs_for_student(student_id: int, limit: int = 10) -> List[G
         student_id=student_id
     ).subquery()
     
-    # Get skills as strings for text matching
-    skill_names = db.session.query(StudentSkill).join("skill").filter_by(
-        student_id=student_id
+    # Get skill names for text matching (explicit join to avoid string-based join targets)
+    # Select from StudentSkill then join Skill to avoid ambiguous join paths
+    skill_rows = db.session.query(Skill.name).select_from(StudentSkill).join(
+        Skill, StudentSkill.skill_id == Skill.id
+    ).filter(
+        StudentSkill.student_id == student_id
     ).all()
+    # older SQLAlchemy versions return list of 1-tuples for single column queries
+    skill_names = [r[0] for r in skill_rows]
     
     # Start with base query for approved, open gigs
     base_query = Gig.query.filter(
@@ -43,7 +48,7 @@ def get_recommended_gigs_for_student(student_id: int, limit: int = 10) -> List[G
     
     # 1. Skills-based matching (highest priority)
     if skill_names:
-        skill_patterns = [f"%{skill.skill.name}%" for skill in skill_names]
+        skill_patterns = [f"%{name}%" for name in skill_names]
         skills_query = base_query.filter(
             or_(
                 *[Gig.title.ilike(pattern) for pattern in skill_patterns],
@@ -186,13 +191,17 @@ def get_student_recommendation_stats(student_id: int) -> Dict:
     applied_count = Application.query.filter_by(student_id=student_id).count()
     
     # Count skills-based matches
-    student_skills = db.session.query(StudentSkill).join("skill").filter_by(
-        student_id=student_id
+    # Query student's skill names for stats
+    student_skill_rows = db.session.query(Skill.name).select_from(StudentSkill).join(
+        Skill, StudentSkill.skill_id == Skill.id
+    ).filter(
+        StudentSkill.student_id == student_id
     ).all()
-    
+    student_skills = [r[0] for r in student_skill_rows]
+
     skill_matches = 0
     if student_skills:
-        skill_patterns = [f"%{skill.skill.name}%" for skill in student_skills]
+        skill_patterns = [f"%{name}%" for name in student_skills]
         skill_matches = Gig.query.filter(
             and_(
                 Gig.approval_status == "approved",

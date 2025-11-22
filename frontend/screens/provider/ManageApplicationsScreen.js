@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api } from '../../services/api';
+import HeaderBack from '../../components/HeaderBack';
 import firestoreAdapter from '../../services/firestoreAdapter';
 import { firebaseAuth } from '../../services/firebaseConfig';
 
@@ -20,10 +21,32 @@ const ManageApplicationsScreen = () => {
 
   const fetchApplications = async () => {
     try {
-      const response = await api.get('/provider/applications', {
-        params: { status: filter },
-      });
-      setApplications(response.data);
+      // First fetch provider's gigs, then fetch applications for each
+      const gigsResponse = await api.get('/gigs/my-gigs');
+      const gigs = gigsResponse.data || [];
+      
+      // Fetch applications for each gig
+      const allApplications = [];
+      for (const gig of gigs) {
+        try {
+          const appsResponse = await api.get(`/gigs/${gig.id}/applications`);
+          const gigApps = (appsResponse.data || []).map(app => ({
+            ...app,
+            gig_title: gig.title,
+            gig_id: gig.id
+          }));
+          allApplications.push(...gigApps);
+        } catch (err) {
+          console.warn(`Error fetching applications for gig ${gig.id}:`, err);
+        }
+      }
+      
+      // Filter by status if needed
+      const filtered = filter === 'all' 
+        ? allApplications 
+        : allApplications.filter(app => app.status === filter);
+      
+      setApplications(filtered);
     } catch (error) {
       console.warn('API applications fetch failed, falling back to Firestore:', error?.message || error);
       try {
@@ -138,6 +161,7 @@ const ManageApplicationsScreen = () => {
 
   return (
     <View style={styles.container}>
+      <HeaderBack title="Applications" backTo="ProviderDashboard" />
       <View style={styles.filters}>
         <FilterButton title="Pending" value="pending" />
         <FilterButton title="Accepted" value="accepted" />

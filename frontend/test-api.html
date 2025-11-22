@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>SkillSync API Test</h1>
+    <button onclick="testGigs()">Test /api/gigs</button>
+    <button onclick="testGigsWithAuth()">Test /api/gigs (with auth)</button>
+    <pre id="output"></pre>
+
+    <script>
+        const output = document.getElementById('output');
+        const API_URL = 'http://127.0.0.1:5000/api';
+
+        async function testGigs() {
+            try {
+                output.textContent = 'Fetching /api/gigs without auth...';
+                const response = await fetch(`${API_URL}/gigs`);
+                const data = await response.json();
+                output.textContent = `Success!\nStatus: ${response.status}\nGigs count: ${data.items?.length || 0}\n\n${JSON.stringify(data, null, 2).slice(0, 500)}`;
+            } catch (error) {
+                output.textContent = `Error: ${error.message}\n${error.stack}`;
+            }
+        }
+
+        async function testGigsWithAuth() {
+            try {
+                output.textContent = 'Fetching /api/gigs with test auth token...';
+                const response = await fetch(`${API_URL}/gigs`, {
+                    headers: {
+                        'Authorization': 'Bearer test:firebase-uid-student1:student'
+                    }
+                });
+                const data = await response.json();
+                output.textContent = `Success!\nStatus: ${response.status}\nGigs count: ${data.items?.length || 0}\n\n${JSON.stringify(data, null, 2).slice(0, 500)}`;
+            } catch (error) {
+                output.textContent = `Error: ${error.message}\n${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>

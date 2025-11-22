@@ -26,7 +26,7 @@ export default function ProfileScreen() {
       if (providerApi && providerApi.updateProfile) {
         await providerApi.updateProfile(payload);
       } else {
-        await api.patch('/provider/profile', payload);
+        await api.patch('/users/profile', payload);
       }
       Alert.alert('Success', 'Profile updated!');
     } catch (err) {
@@ -69,7 +69,7 @@ export default function ProfileScreen() {
       if (providerApi && providerApi.updateProfile) {
         await providerApi.updateProfile(updatePayload);
       } else {
-        await api.patch('/provider/profile', updatePayload);
+        await api.patch('/users/profile', updatePayload);
       }
       Alert.alert('Uploaded', 'Document uploaded successfully and saved to your profile.');
     } catch (err) {

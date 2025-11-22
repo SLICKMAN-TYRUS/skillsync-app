@@ -10,6 +10,8 @@ import RateProviderScreen from '../studentDashboard/RateProviderScreen';
 import ChatScreen from '../studentDashboard/ChatScreen';
 import ApplicationConfirmationScreen from '../studentDashboard/ApplicationConfirmationScreen';
 import NotificationsScreen from '../studentDashboard/NotificationsScreen';
+import SavedGigsScreen from '../studentDashboard/SavedGigsScreen';
+import MyApplicationsScreen from '../studentDashboard/MyApplicationsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +26,8 @@ export default function StudentNavigator() {
       <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
       <Stack.Screen name="CompletedGigsScreen" component={CompletedGigsScreen} />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+      <Stack.Screen name="SavedGigsScreen" component={SavedGigsScreen} options={{ title: 'Saved Gigs' }} />
+      <Stack.Screen name="MyApplicationsScreen" component={MyApplicationsScreen} options={{ title: 'My Applications' }} />
       <Stack.Screen name="RateProviderScreen" component={RateProviderScreen} />
       <Stack.Screen name="ApplicationConfirmationScreen" component={ApplicationConfirmationScreen} />
     </Stack.Navigator>

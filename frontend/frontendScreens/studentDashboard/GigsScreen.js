@@ -1,43 +1,36 @@
 // screens/GigsScreen.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import ErrorBanner from '../../components/ErrorBanner';
 import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
-
-const gigs = [
-  {
-    id: '1',
-    title: 'Graphic Design for Marketing',
-    category: 'Design',
-    date: 'January 28, 2026',
-    location: 'Kigali',
-    description: 'Create marketing materials for our new campaign.',
-    provider: 'Aline Mukamana',
-  },
-  {
-    id: '2',
-    title: 'Website Development',
-    category: 'Tech',
-    date: 'May 8, 2026',
-    location: 'Nyanza',
-    description: 'Build a responsive website for our startup.',
-    provider: 'Eric Nkurunziza',
-  },
-  {
-    id: '3',
-    title: 'Social Media Strategy',
-    category: 'Marketing',
-    date: 'March 15, 2026',
-    location: 'Musanze',
-    description: 'Develop a content calendar and engagement plan.',
-    provider: 'Sandrine Uwizeye',
-  },
-];
+import { fetchGigs } from '../services/api';
+import GigCard from '../../components/GigCard';
 
 export default function GigsScreen() {
   const navigation = useNavigation();
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchGigs();
+        if (!mounted) return;
+        setItems(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to load gigs', err);
+        setError(err?.message || 'Failed to load gigs');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -50,26 +43,29 @@ export default function GigsScreen() {
         </View>
 
         {/* Gig Listings */}
-        {gigs.map((gig) => (
-          <View key={gig.id} style={styles.card}>
-            <Text style={styles.title}>{gig.title}</Text>
-            <Text style={styles.meta}>Category: {gig.category}</Text>
-            <Text style={styles.meta}>Date: {gig.date}</Text>
-            <Text style={styles.meta}>Location: {gig.location}</Text>
-            <Text style={styles.description}>{gig.description}</Text>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => {
+        {loading && <ActivityIndicator size="large" color="#0077cc" />}
+        {!loading && items.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No gigs are available yet. Please check back soon.</Text>
+            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SavedGigsScreen')}>
+              <Text style={styles.buttonText}>View Saved Gigs</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {!loading && items.map((gig) => (
+          <View key={gig.id} style={{ marginBottom: 16 }}>
+            <GigCard
+              gig={gig}
+              onPress={(detail) => {
                 try {
-                  navigation.navigate('GigDetailScreen', { gig });
+                  navigation.navigate('GigDetailScreen', { gig: detail, gigId: detail.id });
                 } catch (err) {
                   console.error('Navigation error', err);
                   setError('Unable to open gig details');
                 }
               }}
-            >
-              <Text style={styles.buttonText}>View / Apply</Text>
-            </TouchableOpacity>
+            />
           </View>
         ))}
       </View>
@@ -139,5 +135,18 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  emptyState: {
+    backgroundColor: '#f2f8ff',
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#444',
+    marginBottom: 12,
+    textAlign: 'center',
   },
 });

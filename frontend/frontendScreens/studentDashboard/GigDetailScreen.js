@@ -1,27 +1,53 @@
 // screens/GigDetailScreen.js
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { studentApi } from '../../services/api';
-import api from '../../services/api';
 import ErrorBanner from '../../components/ErrorBanner';
 import HeaderBack from '../../components/HeaderBack';
+import { fetchGigById, applyToGig, fetchCurrentProfile } from '../services/api';
 
 export default function GigDetailScreen({ route }) {
   const { gig } = route.params;
   const navigation = useNavigation();
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [fullGig, setFullGig] = useState(g || null);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!gig?.id) return;
+      setLoading(true);
+      try {
+        const data = await fetchGigById(gig.id);
+        if (mounted) setFullGig(data);
+      } catch (err) {
+        console.error('Failed to fetch gig details', err);
+        setError(err?.message || 'Failed to load gig details');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [gig]);
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
   <HeaderBack title="Gig Details" backTo="GigsScreen" />
   <ErrorBanner message={error} onClose={() => setError('')} />
-  <Text style={styles.title}>{gig.title}</Text>
-        <Text style={styles.meta}>Category: {gig.category}</Text>
-        <Text style={styles.meta}>Date: {gig.date}</Text>
-        <Text style={styles.meta}>Location: {gig.location}</Text>
-        <Text style={styles.description}>{gig.description}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#0077cc" />
+        ) : (
+          <>
+            <Text style={styles.title}>{fullGig?.title || gig.title}</Text>
+            <Text style={styles.meta}>Category: {fullGig?.category || gig.category}</Text>
+            <Text style={styles.meta}>Deadline: {fullGig?.deadline || gig.date}</Text>
+            <Text style={styles.meta}>Location: {fullGig?.location || gig.location}</Text>
+            <Text style={styles.description}>{fullGig?.description || gig.description}</Text>
+          </>
+        )}
 
         <TouchableOpacity
           style={styles.button}
@@ -35,15 +61,8 @@ export default function GigDetailScreen({ route }) {
           onPress={async () => {
             try {
               // fetch student profile to check for resume
-              let resumeUrl = null;
-              try {
-                const resp = await studentApi.getProfile();
-                resumeUrl = resp.data?.resumeUrl;
-              } catch (err) {
-                // fallback
-                const r = await api.get('/student/profile');
-                resumeUrl = r.data?.resumeUrl;
-              }
+              const profile = await fetchCurrentProfile();
+              const resumeUrl = profile?.resumeUrl;
 
               if (!resumeUrl) {
                 setError('Please upload your resume in your profile before applying.');
@@ -59,12 +78,12 @@ export default function GigDetailScreen({ route }) {
                     text: 'Apply',
                     onPress: async () => {
                       try {
-                        await studentApi.applyToGig(gig.id, { resumeUrl });
+                        await applyToGig(gig.id);
                         Alert.alert('Applied', 'Your application has been submitted');
                         navigation.navigate('ApplicationConfirmationScreen', { gigId: gig.id, gigTitle: gig.title });
                       } catch (err) {
                         console.error('Apply failed', err);
-                        setError(err?.response?.data?.message || err?.message || 'Failed to apply');
+                        setError(err?.message || err?.response?.data?.message || 'Failed to apply');
                       }
                     },
                   },

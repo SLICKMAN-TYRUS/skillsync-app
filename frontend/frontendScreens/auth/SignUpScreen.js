@@ -10,6 +10,9 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { fetchLocations } from '../services/api';
+import ErrorBanner from '../../components/ErrorBanner';
+import { signUp } from '../../services/authHelpers';
+import { ActivityIndicator } from 'react-native';
 
 export default function SignUpScreen() {
   const navigation = useNavigation();
@@ -34,10 +37,40 @@ export default function SignUpScreen() {
   const [location, setLocation] = useState(DEFAULT_KIGALI_LOCATIONS[0]);
   const [locations, setLocations] = useState([]);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignUp = () => {
-    // TODO: Add validation and backend registration logic
-    navigation.replace('RoleBased', { role });
+  const handleSignUp = async () => {
+    setError('');
+    if (!fullName || !email || !password || !confirmPassword) {
+      setError('All fields are required.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password should be at least 8 characters.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await signUp(fullName, email, password);
+      navigation.replace('RoleBased', { role });
+    } catch (err) {
+      console.error('Sign up error', err);
+      const code = err?.code || '';
+      if (code === 'auth/email-already-in-use') setError('An account with this email already exists.');
+      else setError(err?.message || 'Failed to create account.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -80,6 +113,7 @@ export default function SignUpScreen() {
       </View>
       <Text style={styles.title}>Sign Up</Text>
 
+      <ErrorBanner message={error} onClose={() => setError('')} />
       <TextInput
         style={styles.input}
         placeholder="Full Name"
@@ -168,8 +202,8 @@ export default function SignUpScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-        <Text style={styles.buttonText}>Create Account</Text>
+      <TouchableOpacity style={styles.button} onPress={handleSignUp} disabled={loading} accessibilityLabel="Create account">
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create Account</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>

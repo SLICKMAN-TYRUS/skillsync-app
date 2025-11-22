@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import RatingStars from '../../components/RatingStars';
 import { api } from '../../services/api';
+import { firebaseAuth } from '../../services/firebaseConfig';
+import HeaderBack from '../../components/HeaderBack';
 
 const RatingScreen = () => {
   const [ratings, setRatings] = useState([]);
@@ -19,9 +21,18 @@ const RatingScreen = () => {
 
   const fetchRatings = async () => {
     try {
-      const response = await api.get('/provider/ratings');
-      setRatings(response.data.ratings);
-      calculateAverageRating(response.data.ratings);
+      const uid = firebaseAuth?.currentUser?.uid;
+      if (!uid) {
+        console.warn('No authenticated user');
+        return;
+      }
+      // Get user profile first to get the user ID
+      const profileResponse = await api.get('/users/profile');
+      const userId = profileResponse.data.id;
+      
+      const response = await api.get(`/ratings/user/${userId}`);
+      setRatings(response.data || []);
+      calculateAverageRating(response.data || []);
     } catch (error) {
       console.error('Error fetching ratings:', error);
     } finally {
@@ -32,7 +43,7 @@ const RatingScreen = () => {
 
   const calculateAverageRating = (ratingsList) => {
     if (ratingsList.length === 0) return;
-    const sum = ratingsList.reduce((acc, curr) => acc + curr.rating, 0);
+    const sum = ratingsList.reduce((acc, curr) => acc + (curr.score || curr.rating || 0), 0);
     setAverageRating((sum / ratingsList.length).toFixed(1));
   };
 
@@ -67,6 +78,7 @@ const RatingScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <HeaderBack title="Ratings" backTo="ProviderDashboard" />
       <View style={styles.header}>
         <Text style={styles.title}>My Ratings</Text>
         <View style={styles.averageRating}>

@@ -33,7 +33,7 @@ def require_auth(func):
                 user = create_user_from_token(decoded)
             except Exception as e:
                 raise AuthenticationError(f"Failed to create user: {str(e)}")
-        
+ 
         g.current_user = user
         return func(*args, **kwargs)
 

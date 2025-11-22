@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api } from '../../services/api';
+import HeaderBack from '../../components/HeaderBack';
 
 const PostGigScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -57,7 +58,7 @@ const PostGigScreen = ({ navigation }) => {
     }
 
     try {
-      const response = await api.post('/provider/gigs', {
+      const response = await api.post('/gigs', {
         ...formData,
         price: parseFloat(formData.price),
         skillsRequired: formData.skillsRequired
@@ -102,6 +103,7 @@ const PostGigScreen = ({ navigation }) => {
         style={styles.scrollContainer}
         contentContainerStyle={styles.contentContainer}
       >
+        <HeaderBack title="Post a Gig" backTo="ProviderDashboard" />
         <View style={styles.header}>
           <Text style={styles.title}>Post a New Gig</Text>
           <Text style={styles.subtitle}>

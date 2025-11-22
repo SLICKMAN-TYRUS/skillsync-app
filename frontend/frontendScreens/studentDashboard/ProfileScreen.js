@@ -44,7 +44,7 @@ const ProfileScreen = ({ navigation }) => {
       if (data) {
         setProfile(data);
       } else {
-        const response = await api.get('/student/profile');
+        const response = await api.get('/users/profile');
         setProfile(response.data);
       }
 
@@ -121,7 +121,7 @@ const ProfileScreen = ({ navigation }) => {
         await studentApi.updateProfile({ resumeUrl: fileUrl });
       } catch (err) {
         // fallback to generic api
-        await api.patch('/student/profile', { resumeUrl: fileUrl });
+        await api.patch('/users/profile', { resumeUrl: fileUrl });
       }
       setProfile((p) => ({ ...(p || {}), resumeUrl: fileUrl }));
       Alert.alert('Success', 'Resume uploaded and saved');
@@ -144,7 +144,7 @@ const ProfileScreen = ({ navigation }) => {
       try {
         await studentApi.updateProfile({ resumeUrl: resumeUrlInput });
       } catch (err) {
-        await api.patch('/student/profile', { resumeUrl: resumeUrlInput });
+        await api.patch('/users/profile', { resumeUrl: resumeUrlInput });
       }
       setProfile((p) => ({ ...(p || {}), resumeUrl: resumeUrlInput }));
       setResumeModalVisible(false);
@@ -166,7 +166,7 @@ const ProfileScreen = ({ navigation }) => {
     try {
       const payload = { schoolName, studentIdNumber, program, yearOfStudy };
       try { await studentApi.updateProfile({ schoolDetails: payload }); }
-      catch (err) { await api.patch('/student/profile', { schoolDetails: payload }); }
+      catch (err) { await api.patch('/users/profile', { schoolDetails: payload }); }
       setProfile((p) => ({ ...(p || {}), schoolDetails: payload }));
       setSchoolModalVisible(false);
       Alert.alert('Saved', 'School details saved and pending verification');
@@ -214,7 +214,7 @@ const ProfileScreen = ({ navigation }) => {
       try {
         await studentApi.updateProfile(payload);
       } catch (err) {
-        await api.patch('/student/profile', payload);
+        await api.patch('/users/profile', payload);
       }
 
       setProfile((p) => ({ ...(p || {}), ...payload }));
@@ -295,6 +295,15 @@ const ProfileScreen = ({ navigation }) => {
           </Text>
           <Text style={styles.userEmail}>{profile?.email || 'email@example.com'}</Text>
           <HeaderBack title="Profile" backTo="StudentDashboard" />
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 12, width: '100%' }}>
+            <TouchableOpacity style={[styles.uploadButton, { paddingHorizontal: 16 }]} onPress={() => navigation.navigate('SavedGigsScreen')}>
+              <Text style={styles.uploadButtonText}>Saved Gigs</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.uploadButton, { backgroundColor: '#eee', paddingHorizontal: 16 }]} onPress={() => navigation.navigate('MyApplicationsScreen')}>
+              <Text style={[styles.uploadButtonText, { color: '#333' }]}>My Applications</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Resume upload */}
           <View style={{ marginTop: 12, alignItems: 'center' }}>

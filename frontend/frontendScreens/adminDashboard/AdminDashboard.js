@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import api, { fetchRoutes } from '../../services/api';
+import api from '../../services/api';
 import HeaderBack from '../../components/HeaderBack';
 import { LineChart } from 'react-native-chart-kit';
 
@@ -57,15 +57,6 @@ const AdminDashboard = ({ navigation }) => {
 
   useEffect(() => {
     fetchDashboardData();
-    // also fetch admin quick routes
-    (async () => {
-      try {
-        const all = await fetchRoutes();
-        if (all && all.Admin) setRoutes(all.Admin);
-      } catch (e) {
-        console.warn('Failed to fetch admin routes', e);
-      }
-    })();
   }, []);
 
   const onRefresh = () => {

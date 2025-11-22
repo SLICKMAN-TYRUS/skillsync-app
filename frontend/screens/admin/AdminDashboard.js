@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import HeaderBack from '../../components/HeaderBack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { api } from '../../services/api';
 
@@ -26,9 +27,9 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await api.get('/admin/dashboard');
-      setStats(response.data.stats);
-      setChartData(response.data.chartData);
+      const response = await api.get('/admin/analytics/overview');
+      setStats(response.data.stats || response.data);
+      setChartData(response.data.chartData || { labels: [], datasets: [{ data: [] }] });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -64,6 +65,7 @@ const AdminDashboard = () => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      <HeaderBack title="Admin Dashboard" />
       <View style={styles.header}>
         <Text style={styles.title}>Dashboard</Text>
       </View>

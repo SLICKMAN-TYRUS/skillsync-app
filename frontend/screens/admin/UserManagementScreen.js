@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RoleBadge from '../../components/RoleBadge';
+import HeaderBack from '../../components/HeaderBack';
 import { api } from '../../services/api';
 
 const UserManagementScreen = () => {
@@ -134,6 +135,7 @@ const UserManagementScreen = () => {
 
   return (
     <View style={styles.container}>
+      <HeaderBack title="User Management" backTo="AdminDashboard" />
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Icon name="search" size={24} color="#666666" />
