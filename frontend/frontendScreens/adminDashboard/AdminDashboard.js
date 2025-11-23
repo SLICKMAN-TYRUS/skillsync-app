@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import api from '../../services/api';
 import HeaderBack from '../../components/HeaderBack';
 import { LineChart } from 'react-native-chart-kit';
+import { ensureTestAuth } from '../../services/devAuth';
 
 const AdminDashboard = ({ navigation }) => {
   const [stats, setStats] = useState({
@@ -29,6 +30,9 @@ const AdminDashboard = ({ navigation }) => {
 
   const fetchDashboardData = async () => {
     try {
+      if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+        await ensureTestAuth('firebase-uid-admin1', 'admin');
+      }
       // Get overview analytics and user analytics (for chart)
       const [overviewRes, usersRes] = await Promise.all([
         api.get('/admin/analytics/overview'),

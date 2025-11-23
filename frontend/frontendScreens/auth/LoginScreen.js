@@ -10,7 +10,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import ErrorBanner from '../../components/ErrorBanner';
-import { signIn, signOut } from '../../services/authHelpers';
+import { signIn, signOut, requestPasswordReset } from '../../services/authHelpers';
 import api from '../../services/api';
 import { useEffect } from 'react';
 import { ActivityIndicator } from 'react-native';
@@ -20,7 +20,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
 
   // Clear credential fields when dev-test auth is enabled or changed.
   useEffect(() => {
@@ -51,11 +53,13 @@ export default function LoginScreen() {
     setError('');
     if (!email || !password) {
       setError('Please enter email and password.');
+      setInfo('');
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address.');
+      setInfo('');
       return;
     }
     setLoading(true);
@@ -69,14 +73,42 @@ export default function LoginScreen() {
       const roleCapitalized = role.charAt(0).toUpperCase() + role.slice(1);
       
       navigation.replace('RoleBased', { role: roleCapitalized });
+      setInfo('');
     } catch (err) {
       console.error('Login error', err);
       const code = err?.code || '';
       if (code === 'auth/user-not-found') setError('No account found for this email.');
       else if (code === 'auth/wrong-password') setError('Incorrect password.');
       else setError(err?.message || 'Failed to sign in.');
+      setInfo('');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    setError('');
+    setInfo('');
+    if (!email) {
+      setError('Enter your email above before requesting a reset link.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await requestPasswordReset(email);
+      setInfo('Password reset email sent. Check your inbox.');
+    } catch (err) {
+      console.error('Password reset error', err);
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found') setError('No account found for this email.');
+      else setError(err?.message || 'Unable to send reset email.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -94,6 +126,7 @@ export default function LoginScreen() {
       <Text style={styles.title}>Login</Text>
 
       <ErrorBanner message={error} onClose={() => setError('')} />
+      {info ? <Text style={styles.infoBanner}>{info}</Text> : null}
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -114,6 +147,12 @@ export default function LoginScreen() {
 
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading} accessibilityLabel="Login">
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Login</Text>}
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={handlePasswordReset} disabled={resetLoading} accessibilityLabel="Forgot password">
+        <Text style={[styles.link, resetLoading && styles.linkDisabled]}>
+          {resetLoading ? 'Sending reset email…' : 'Forgot your password? Send reset link'}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
@@ -157,6 +196,7 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   link: { color: '#0077cc', textAlign: 'center', fontSize: 14 },
+  linkDisabled: { opacity: 0.6 },
   roleRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   roleButton: {
     flex: 1,
@@ -168,4 +208,14 @@ const styles = StyleSheet.create({
   },
   roleButtonSelected: { backgroundColor: '#0077cc' },
   roleText: { color: '#000', fontWeight: '600' },
+  infoBanner: {
+    backgroundColor: '#1B5E20',
+    color: '#fff',
+    textAlign: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    fontWeight: '600',
+  },
 });

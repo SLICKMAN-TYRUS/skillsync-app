@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { fetchSavedGigs } from '../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
 import GigCard from '../../components/GigCard';
 import ErrorBanner from '../../components/ErrorBanner';
 
@@ -12,6 +13,9 @@ export default function SavedGigsScreen({ navigation }) {
 
   const load = async () => {
     try {
+      if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+        await ensureTestAuth('firebase-uid-student1', 'student');
+      }
       const data = await fetchSavedGigs();
       setSaved(data.items || data);
     } catch (err) {

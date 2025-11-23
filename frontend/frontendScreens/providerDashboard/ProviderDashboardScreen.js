@@ -1,5 +1,5 @@
 // screens/ProviderDashboardScreen.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,47 +11,148 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
-import { providerApi } from '../../services/api';
+import { providerApi } from '../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
+import { getSharedEventStream } from '../../services/eventStream';
+import { pushToast } from '../../services/toastStore';
 
 export default function ProviderDashboardScreen() {
   const navigation = useNavigation();
   const [routes, setRoutes] = useState([]);
   const [gigs, setGigs] = useState([]);
-  const [openContracts, setOpenContracts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [metrics, setMetrics] = useState({
+    open: 0,
+    pendingApproval: 0,
+    applicants: 0,
+    completed: 0,
+  });
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadProviderData = useCallback(
+    async ({ silent } = {}) => {
       try {
-        setLoading(true);
-        // Fetch provider's gigs from backend
+        if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+          await ensureTestAuth('firebase-uid-provider1', 'provider');
+        }
+        if (!silent) {
+          setLoading(true);
+        }
         const gigsData = await providerApi.getGigs();
-        if (!mounted) return;
-        setGigs(Array.isArray(gigsData) ? gigsData : []);
-        const gigsArray = Array.isArray(gigsData) ? gigsData : [];
-        setOpenContracts(gigsArray.filter((g) => (g.status || '').toLowerCase() === 'open').length);
+        if (!mountedRef.current) {
+          return;
+        }
+        const gigsArray = Array.isArray(gigsData) ? gigsData : gigsData?.items || [];
+        setGigs(gigsArray);
+
+        const openApproved = gigsArray.filter(
+          (g) => (g.approval_status || '').toLowerCase() === 'approved' && (g.status || '').toLowerCase() === 'open'
+        ).length;
+        const pending = gigsArray.filter((g) => (g.approval_status || '').toLowerCase() === 'pending').length;
+        const applicants = gigsArray.reduce((sum, g) => sum + (g.application_count || 0), 0);
+        const completed = gigsArray.filter((g) => (g.status || '').toLowerCase() === 'completed').length;
+
+        setMetrics({
+          open: openApproved,
+          pendingApproval: pending,
+          applicants,
+          completed,
+        });
+        setError('');
       } catch (e) {
         console.error('Failed to fetch provider gigs', e);
-        setError('Unable to load your gigs. Please try again soon.');
+        if (!mountedRef.current) {
+          return;
+        }
+        if (!silent) {
+          setError('Unable to load your gigs. Please try again soon.');
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (!mountedRef.current) {
+          return;
+        }
+        if (!silent) {
+          setLoading(false);
+        }
       }
-    })();
-    return () => { mounted = false; };
-  }, []);
+    },
+    []
+  );
+  useEffect(() => {
+    loadProviderData();
+  }, [loadProviderData]);
+
+  useEffect(() => {
+    const client = getSharedEventStream();
+    if (!client) {
+      return undefined;
+    }
+
+    const offMetrics = client.on('metrics_changed', (payload = {}) => {
+      if (payload?.scope === 'provider') {
+        loadProviderData({ silent: true });
+      }
+    });
+
+    const offApproved = client.on('gig_approved', (payload = {}) => {
+      const title = payload?.title || 'Your gig';
+      pushToast({ type: 'success', message: `${title} approved.` });
+      loadProviderData({ silent: true });
+    });
+
+    const offRejected = client.on('gig_rejected', (payload = {}) => {
+      const title = payload?.title || 'Your gig';
+      const reason = payload?.reason ? ` Reason: ${payload.reason}` : '';
+      pushToast({ type: 'warning', message: `${title} rejected.${reason}` });
+      loadProviderData({ silent: true });
+    });
+
+    return () => {
+      offMetrics();
+      offApproved();
+      offRejected();
+    };
+  }, [loadProviderData]);
 
   const renderStatusBadge = (status) => {
     const normalized = (status || '').toLowerCase();
-    const color = normalized === 'completed'
-      ? '#4CAF50'
-      : normalized === 'assigned' || normalized === 'in_progress'
-        ? '#FF9800'
-        : '#2196F3';
+    const labelMap = {
+      open: 'Open',
+      in_progress: 'In Progress',
+      completed: 'Completed',
+      closed: 'Closed',
+      cancelled: 'Cancelled',
+    };
+    const colorMap = {
+      open: '#1976D2',
+      in_progress: '#FF9800',
+      completed: '#4CAF50',
+      closed: '#9E9E9E',
+      cancelled: '#D32F2F',
+    };
+    const color = colorMap[normalized] || '#2196F3';
+    const label = labelMap[normalized] || (status || 'Open');
     return (
       <View style={[styles.statusBadge, { backgroundColor: color }]}> 
-        <Text style={styles.statusText}>{status || 'open'}</Text>
+        <Text style={styles.statusText}>{label}</Text>
+      </View>
+    );
+  };
+
+  const renderApprovalBadge = (approval) => {
+    const normalized = (approval || '').toLowerCase();
+    const color = normalized === 'approved' ? '#4CAF50' : normalized === 'rejected' ? '#D32F2F' : '#FFB300';
+    const label = normalized ? normalized.replace('_', ' ') : 'pending';
+    return (
+      <View style={[styles.approvalBadge, { backgroundColor: color }]}> 
+        <Text style={styles.approvalText}>{label.toUpperCase()}</Text>
       </View>
     );
   };
@@ -79,18 +180,18 @@ export default function ProviderDashboardScreen() {
           <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: '#EAF6FF' }]}>
             <Icon name="work" size={28} color="#0b72b9" />
-            <Text style={styles.statValue}>{gigs.length}</Text>
-            <Text style={styles.statLabel}>Active Gigs</Text>
+            <Text style={styles.statValue}>{metrics.open}</Text>
+            <Text style={styles.statLabel}>Open & Approved</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FFF5EB' }]}>
             <Icon name="group" size={28} color="#ff8a00" />
-            <Text style={styles.statValue}>10</Text>
-            <Text style={styles.statLabel}>Applicants</Text>
+            <Text style={styles.statValue}>{metrics.applicants}</Text>
+            <Text style={styles.statLabel}>Total Applicants</Text>
           </View>
           <TouchableOpacity style={[styles.statCard, { backgroundColor: '#FFF7FF' }]} onPress={() => navigation.navigate('ManageGigs')}>
             <Icon name="assignment" size={28} color="#8c4bd6" />
-            <Text style={styles.statValue}>{openContracts}</Text>
-            <Text style={styles.statLabel}>Open Contracts</Text>
+            <Text style={styles.statValue}>{metrics.pendingApproval}</Text>
+            <Text style={styles.statLabel}>Pending Approval</Text>
           </TouchableOpacity>
         </View>
 
@@ -108,6 +209,10 @@ export default function ProviderDashboardScreen() {
               <View style={styles.rowBetween}>
                 {renderStatusBadge(gig.status)}
                 <Text style={styles.smallTextDark}>{gig.application_count || 0} applicants</Text>
+              </View>
+              <View style={styles.rowBetween}>
+                {renderApprovalBadge(gig.approval_status)}
+                <Text style={styles.smallTextDark}>{gig.deadline_display || gig.deadline || 'Flexible timeline'}</Text>
               </View>
               <View style={styles.gigActions}>
                 <TouchableOpacity style={styles.actionIcon} onPress={() => navigation.navigate('ReviewApplications', { gigId: gig.id })}>
@@ -198,6 +303,8 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14 },
   statusText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  approvalBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  approvalText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   gigActions: { flexDirection: 'row', marginTop: 12 },
   actionIcon: { alignItems: 'center', marginRight: 18 },
   iconCircle: { width: 50, height: 50, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginBottom: 8, elevation: 2 },

@@ -5,6 +5,7 @@ import ErrorBanner from '../../components/ErrorBanner';
 import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
 import { studentApi } from '../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
 
 export default function CompletedGigsScreen() {
   const navigation = useNavigation();
@@ -17,6 +18,9 @@ export default function CompletedGigsScreen() {
     (async () => {
       try {
         setLoading(true);
+        if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+          await ensureTestAuth('firebase-uid-student1', 'student');
+        }
         const apps = await studentApi.getMyApplications();
         if (!mounted) return;
         const list = Array.isArray(apps) ? apps : (apps.items || []);

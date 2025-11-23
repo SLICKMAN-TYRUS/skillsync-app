@@ -1,41 +1,101 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorBanner from '../../components/ErrorBanner';
 import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
 import { studentApi } from '../../services/api';
-import { useEffect, useState } from 'react';
+import { ensureTestAuth } from '../../services/devAuth';
+import { pushToast } from '../../services/toastStore';
+import { getSharedEventStream } from '../../services/eventStream';
 
 export default function StudentDashboardScreen() {
   const navigation = useNavigation();
-  const [routes, setRoutes] = useState([]);
   const [error, setError] = useState('');
   const [applicationCount, setApplicationCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
   const navigateTo = (screen) => {
     navigation.navigate(screen);
   };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadApplications = useCallback(
+    async ({ silent } = {}) => {
       try {
-        setLoading(true);
-        // Fetch student's applications to show count
+        if (!silent) {
+          setLoading(true);
+        }
+        if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+          await ensureTestAuth('firebase-uid-student1', 'student');
+        }
         const apps = await studentApi.getMyApplications();
-        if (!mounted) return;
+        if (!mountedRef.current) {
+          return;
+        }
         const appsList = Array.isArray(apps) ? apps : (apps.items || []);
         setApplicationCount(appsList.length);
+        setError('');
       } catch (e) {
         console.warn('Failed to fetch applications', e);
+        if (!mountedRef.current) {
+          return;
+        }
+        if (!silent) {
+          setError('Unable to load applications right now.');
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (!mountedRef.current) {
+          return;
+        }
+        if (!silent) {
+          setLoading(false);
+        }
       }
-    })();
-    return () => { mounted = false; };
-  }, []);
+    },
+    []
+  );
+
+  useEffect(() => {
+    loadApplications();
+  }, [loadApplications]);
+
+  useEffect(() => {
+    const client = getSharedEventStream();
+    if (!client) {
+      return undefined;
+    }
+
+    const offGigUpdated = client.on('gig_updated', (payload = {}) => {
+      const title = payload?.title || 'A gig you follow';
+      const reason = (payload?.reason || '').toLowerCase();
+      if (reason === 'approved') {
+        pushToast({ type: 'success', message: `${title} was approved.` });
+      } else if (reason === 'rejected') {
+        pushToast({ type: 'warning', message: `${title} was rejected.` });
+      } else if (reason) {
+        pushToast({ type: 'info', message: `${title} updated (${reason}).` });
+      }
+      loadApplications({ silent: true });
+    });
+
+    const offMetrics = client.on('metrics_changed', (payload = {}) => {
+      if (payload?.scope === 'student') {
+        loadApplications({ silent: true });
+      }
+    });
+
+    return () => {
+      offGigUpdated();
+      offMetrics();
+    };
+  }, [loadApplications]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

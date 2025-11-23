@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import HeaderBack from '../../components/HeaderBack';
 import { providerApi } from '../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
 
 export default function ReviewApplicationsScreen({ route }) {
   const { gigId } = route.params;
@@ -16,6 +17,9 @@ export default function ReviewApplicationsScreen({ route }) {
     const load = async () => {
       setLoading(true);
       try {
+        if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+          await ensureTestAuth('firebase-uid-provider1', 'provider');
+        }
         const apps = await providerApi.getApplicationsForGig(gigId);
         if (!mounted) return;
         setApplications(Array.isArray(apps) ? apps : (apps.items || []));
@@ -43,6 +47,9 @@ export default function ReviewApplicationsScreen({ route }) {
             setActionsPending((s) => ({ ...s, [appId]: true }));
             const prev = applications.slice();
             try {
+              if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+                await ensureTestAuth('firebase-uid-provider1', 'provider');
+              }
               if (action === 'select') {
                 await providerApi.selectApplication(appId);
               } else {

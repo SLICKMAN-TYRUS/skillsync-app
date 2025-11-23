@@ -5,6 +5,7 @@ import ErrorBanner from '../../components/ErrorBanner';
 import HeaderBack from '../../components/HeaderBack';
 import { useNavigation } from '@react-navigation/native';
 import { fetchGigs } from '../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
 import GigCard from '../../components/GigCard';
 
 export default function GigsScreen() {
@@ -18,6 +19,9 @@ export default function GigsScreen() {
     const load = async () => {
       setLoading(true);
       try {
+        if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+          await ensureTestAuth('firebase-uid-student1', 'student');
+        }
         const data = await fetchGigs();
         if (!mounted) return;
         setItems(Array.isArray(data) ? data : []);

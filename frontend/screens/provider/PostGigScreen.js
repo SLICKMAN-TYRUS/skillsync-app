@@ -23,7 +23,11 @@ const PostGigScreen = ({ navigation }) => {
     duration: '',
     requirements: '',
     skillsRequired: '',
+    location: '',
+    deadline: '',
   });
+
+  const [submitting, setSubmitting] = useState(false);
 
   const [errors, setErrors] = useState({});
 
@@ -46,6 +50,15 @@ const PostGigScreen = ({ navigation }) => {
     if (!formData.duration.trim()) {
       newErrors.duration = 'Duration is required';
     }
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required';
+    }
+    if (formData.deadline.trim()) {
+      const deadlinePattern = /^\d{4}-\d{2}-\d{2}$/;
+      if (!deadlinePattern.test(formData.deadline.trim())) {
+        newErrors.deadline = 'Deadline must be YYYY-MM-DD';
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -58,27 +71,60 @@ const PostGigScreen = ({ navigation }) => {
     }
 
     try {
-      const response = await api.post('/gigs', {
-        ...formData,
-        price: parseFloat(formData.price),
-        skillsRequired: formData.skillsRequired
-          .split(',')
-          .map(skill => skill.trim())
-          .filter(Boolean),
-      });
+      setSubmitting(true);
+      const skills = formData.skillsRequired
+        .split(',')
+        .map(skill => skill.trim())
+        .filter(Boolean);
+
+      const sections = [formData.description.trim()];
+      if (formData.requirements.trim()) {
+        sections.push(`Requirements:\n${formData.requirements.trim()}`);
+      }
+      if (skills.length) {
+        sections.push(`Preferred skills: ${skills.join(', ')}`);
+      }
+      if (formData.duration.trim()) {
+        sections.push(`Estimated duration: ${formData.duration.trim()}`);
+      }
+
+      const payload = {
+        title: formData.title.trim(),
+        description: sections.filter(Boolean).join('\n\n'),
+        category: formData.category.trim(),
+        budget: parseFloat(formData.price),
+        location: formData.location.trim(),
+        deadline: formData.deadline.trim() || null,
+      };
+
+      await api.post('/gigs', payload);
 
       Alert.alert(
         'Success',
-        'Your gig has been submitted for approval',
+        'Your gig has been submitted for admin review. You will be notified once it is approved.',
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Dashboard'),
+            onPress: () => navigation.navigate('ProviderDashboard'),
           },
         ],
       );
+
+      setFormData({
+        title: '',
+        description: '',
+        category: '',
+        price: '',
+        duration: '',
+        requirements: '',
+        skillsRequired: '',
+        location: '',
+        deadline: '',
+      });
     } catch (error) {
       Alert.alert('Error', 'Failed to post gig. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -138,6 +184,14 @@ const PostGigScreen = ({ navigation }) => {
           error={errors.category}
         />
 
+        <FormField
+          label="Location"
+          placeholder="Where will the work take place?"
+          value={formData.location}
+          onChangeText={(text) => setFormData({ ...formData, location: text })}
+          error={errors.location}
+        />
+
         <View style={styles.row}>
           <View style={styles.halfField}>
             <FormField
@@ -178,12 +232,21 @@ const PostGigScreen = ({ navigation }) => {
           onChangeText={(text) => setFormData({ ...formData, skillsRequired: text })}
         />
 
+        <FormField
+          label="Deadline"
+          placeholder="YYYY-MM-DD"
+          value={formData.deadline}
+          onChangeText={(text) => setFormData({ ...formData, deadline: text })}
+          error={errors.deadline}
+        />
+
         <TouchableOpacity
-          style={styles.submitButton}
+          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
           onPress={handleSubmit}
+          disabled={submitting}
         >
           <Icon name="check" size={24} color="#FFFFFF" />
-          <Text style={styles.submitButtonText}>Submit Gig</Text>
+          <Text style={styles.submitButtonText}>{submitting ? 'Submitting...' : 'Submit Gig'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -255,6 +318,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginTop: 24,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: '#FFFFFF',

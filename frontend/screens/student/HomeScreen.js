@@ -123,7 +123,7 @@ const HomeScreen = ({ navigation }) => {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.gigsList}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={fetchGigs} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>

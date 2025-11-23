@@ -17,14 +17,39 @@ try {
 import { firebaseAuth } from './firebaseConfig';
 import { getDevAuthHeader } from './devAuth';
 
-// Create axios instance with default config
-// Prefer an explicit BACKEND_URL environment variable (set when running Expo or in CI)
-const DEFAULT_BACKEND = process.env.REACT_APP_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:5000/api';
+const resolveDefaultBaseUrl = () => {
+  const explicit = process.env.REACT_APP_BACKEND_URL || process.env.BACKEND_URL;
+  if (explicit) {
+    return explicit.replace(/\/$/, '');
+  }
 
-// Debug: log the backend URL being used
+  if (typeof window === 'undefined') {
+    return 'http://127.0.0.1:5000/api';
+  }
+
+  const { protocol = 'http:', hostname = '127.0.0.1', port } = window.location;
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//127.0.0.1:5000/api`;
+  }
+
+  if (port) {
+    return `${protocol}//${hostname}:5000/api`;
+  }
+
+  const subdomainMatch = hostname.match(/^(?<prefix>.+)-\d+(?<suffix>\..+)$/);
+  if (subdomainMatch?.groups) {
+    const { prefix, suffix } = subdomainMatch.groups;
+    return `${protocol}//${prefix}-5000${suffix}/api`;
+  }
+
+  return `${protocol}//${hostname}/api`;
+};
+
+const DEFAULT_BACKEND = resolveDefaultBaseUrl();
+
 if (typeof window !== 'undefined') {
-  console.log('API Backend URL:', DEFAULT_BACKEND);
-  console.log('ENV REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
+  console.log('[API] Using base URL:', DEFAULT_BACKEND);
 }
 
 const api = axios.create({
@@ -63,6 +88,19 @@ api.interceptors.request.use(
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const isFormData =
+      (typeof FormData !== 'undefined' && config.data instanceof FormData)
+      || (config.data && typeof config.data === 'object' && typeof config.data.append === 'function' && Array.isArray(config.data._parts));
+
+    if (isFormData) {
+      if (config.headers?.['Content-Type']) {
+        delete config.headers['Content-Type'];
+      }
+      if (config.headers?.common?.['Content-Type']) {
+        delete config.headers.common['Content-Type'];
+      }
     }
     return config;
   },
@@ -136,7 +174,30 @@ const handleLogout = async () => {
 const studentApi = {
   getGigs: (params) => api.get('/gigs', { params }),
   getGigDetails: (gigId) => api.get(`/gigs/${gigId}`),
-  applyToGig: (gigId, data) => api.post(`/applications`, { ...data, gig_id: gigId }),
+  applyToGig: (gigId, applicationData = {}) => {
+    const payload = { gig_id: gigId };
+
+    if (applicationData && typeof applicationData === 'object') {
+      Object.entries(applicationData).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+          return;
+        }
+
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed.length === 0) {
+            return;
+          }
+          payload[key] = trimmed;
+          return;
+        }
+
+        payload[key] = value;
+      });
+    }
+
+    return api.post('/applications', payload);
+  },
   getApplications: (params) => api.get('/applications/my-applications', { params }),
   getProfile: () => api.get('/auth/me'),
   updateProfile: (data) => api.patch('/users/me', data),

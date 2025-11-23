@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Alert } from 'react-native';
 import { providerApi } from '../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
 import { Picker } from '@react-native-picker/picker';
 
 export default function ManageGigsScreen() {
@@ -14,6 +15,9 @@ export default function ManageGigsScreen() {
     const load = async () => {
       setLoading(true);
       try {
+        if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+          await ensureTestAuth('firebase-uid-provider1', 'provider');
+        }
         const data = await providerApi.getGigs();
         if (!mounted) return;
         // backend may return an array or object
@@ -29,10 +33,21 @@ export default function ManageGigsScreen() {
     return () => { mounted = false; };
   }, []);
 
+  const allowedStatuses = [
+    { label: 'Open', value: 'open' },
+    { label: 'In Progress', value: 'in_progress' },
+    { label: 'Completed', value: 'completed' },
+    { label: 'Closed', value: 'closed' },
+    { label: 'Cancelled', value: 'cancelled' },
+  ];
+
   const updateStatus = async (id, newStatus) => {
     const prev = gigs.slice();
     setGigs((g) => g.map((gig) => (gig.id === id ? { ...gig, status: newStatus } : gig)));
     try {
+      if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+        await ensureTestAuth('firebase-uid-provider1', 'provider');
+      }
       await providerApi.updateGig(id, { status: newStatus });
     } catch (err) {
       console.error('Failed to update status', err);
@@ -51,6 +66,9 @@ export default function ManageGigsScreen() {
           const prev = gigs.slice();
           setGigs((g) => g.filter((gig) => gig.id !== id));
           try {
+            if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+              await ensureTestAuth('firebase-uid-provider1', 'provider');
+            }
             await providerApi.deleteGig(id);
           } catch (err) {
             console.error('Delete failed', err);
@@ -73,33 +91,45 @@ export default function ManageGigsScreen() {
           <Text style={{ textAlign: 'center', color: '#555' }}>You haven't posted any gigs yet.</Text>
         ) : null}
 
-        {!loading && gigs.map((gig) => (
-          <View key={gig.id} style={styles.card}>
-            <Text style={styles.title}>{gig.title}</Text>
+        {!loading && gigs.map((gig) => {
+          const isPending = (gig.approval_status || '').toLowerCase() !== 'approved';
+          return (
+            <View key={gig.id} style={styles.card}>
+              <Text style={styles.title}>{gig.title}</Text>
 
-            <View style={styles.row}>
-              <Text style={styles.label}>Status:</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={gig.status}
-                  onValueChange={(value) => updateStatus(gig.id, value)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="open" value="open" />
-                  <Picker.Item label="assigned" value="assigned" />
-                  <Picker.Item label="completed" value="completed" />
-                </Picker>
+              <Text style={styles.approvalText}>Approval status: {(gig.approval_status || 'pending').toUpperCase()}</Text>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Status:</Text>
+                <View style={[styles.pickerContainer, isPending && styles.pickerDisabled]}>
+                  <Picker
+                    selectedValue={gig.status}
+                    onValueChange={(value) => {
+                      if (isPending) {
+                        Alert.alert('Pending approval', 'You can update the gig status once it has been approved by an administrator.');
+                        return;
+                      }
+                      updateStatus(gig.id, value);
+                    }}
+                    enabled={!isPending}
+                    style={styles.picker}
+                  >
+                    {allowedStatuses.map((option) => (
+                      <Picker.Item key={option.value} label={option.label} value={option.value} />
+                    ))}
+                  </Picker>
+                </View>
               </View>
-            </View>
 
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => deleteGig(gig.id)}
-            >
-              <Text style={styles.deleteText}>Delete Gig</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => deleteGig(gig.id)}
+              >
+                <Text style={styles.deleteText}>Delete Gig</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </View>
     </ScrollView>
   );
@@ -136,6 +166,12 @@ const styles = StyleSheet.create({
     color: '#0077cc',
     marginBottom: 10,
   },
+  approvalText: {
+    fontSize: 12,
+    color: '#555',
+    marginBottom: 12,
+    fontWeight: '600',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -153,6 +189,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#fff',
+  },
+  pickerDisabled: {
+    opacity: 0.6,
   },
   picker: {
     height: 40,

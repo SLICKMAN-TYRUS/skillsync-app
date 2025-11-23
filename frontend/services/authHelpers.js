@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { firebaseAuth } from './firebaseConfig';
 
 export async function signIn(email, password) {
-  const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+  const normalizedEmail = email?.trim();
+  const userCredential = await signInWithEmailAndPassword(firebaseAuth, normalizedEmail, password);
   const user = userCredential.user;
   const idToken = await user.getIdToken();
   await AsyncStorage.setItem('auth_token', idToken);
@@ -12,7 +13,8 @@ export async function signIn(email, password) {
 }
 
 export async function signUp(name, email, password) {
-  const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+  const normalizedEmail = email?.trim();
+  const userCredential = await createUserWithEmailAndPassword(firebaseAuth, normalizedEmail, password);
   const user = userCredential.user;
   // set display name where possible
   try {
@@ -35,4 +37,11 @@ export async function signOut() {
   await AsyncStorage.multiRemove(['auth_token', 'refresh_token', 'user']);
 }
 
-export default { signIn, signUp, signOut };
+export async function requestPasswordReset(email) {
+  if (!email) {
+    throw new Error('Email is required to reset the password.');
+  }
+  await sendPasswordResetEmail(firebaseAuth, email.trim());
+}
+
+export default { signIn, signUp, signOut, requestPasswordReset };

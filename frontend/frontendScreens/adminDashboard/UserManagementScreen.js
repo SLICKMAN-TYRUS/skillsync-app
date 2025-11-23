@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RoleBadge from '../../components/RoleBadge';
-import { api } from '../../services/api';
+import api from '../../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
 
 const UserManagementScreen = () => {
   const [users, setUsers] = useState([]);
@@ -20,6 +21,9 @@ const UserManagementScreen = () => {
 
   const fetchUsers = async () => {
     try {
+      if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+        await ensureTestAuth('firebase-uid-admin1', 'admin');
+      }
       const response = await api.get('/admin/users', {
         params: { search: searchQuery },
       });
@@ -52,6 +56,9 @@ const UserManagementScreen = () => {
           text: 'Change',
           onPress: async () => {
             try {
+              if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+                await ensureTestAuth('firebase-uid-admin1', 'admin');
+              }
               await api.patch(`/admin/users/${userId}/role`, { role: newRole });
               setUsers(users.map(user =>
                 user.id === userId ? { ...user, role: newRole } : user

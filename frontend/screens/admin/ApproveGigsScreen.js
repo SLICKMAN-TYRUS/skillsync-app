@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { api } from '../../services/api';
+import { adminApi } from '../../services/api';
 import HeaderBack from '../../components/HeaderBack';
 import firestoreAdapter from '../../services/firestoreAdapter';
 
@@ -19,8 +19,9 @@ const ApproveGigsScreen = () => {
 
   const fetchPendingGigs = async () => {
     try {
-      const response = await api.get('/admin/gigs/pending');
-      setGigs(response.data);
+      const response = await adminApi.getPendingGigs();
+      const data = response?.data || response || [];
+      setGigs(Array.isArray(data) ? data : data.items || []);
     } catch (error) {
       console.warn('API pending gigs fetch failed, falling back to Firestore:', error?.message || error);
       try {
@@ -40,7 +41,7 @@ const ApproveGigsScreen = () => {
 
   const handleApprove = async (gigId) => {
     try {
-      await api.post(`/admin/gigs/${gigId}/approve`);
+      await adminApi.approveGig(gigId);
       setGigs(gigs.filter(gig => gig.id !== gigId));
       Alert.alert('Success', 'Gig has been approved');
     } catch (error) {
@@ -59,7 +60,7 @@ const ApproveGigsScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.post(`/admin/gigs/${gigId}/reject`);
+              await adminApi.rejectGig(gigId);
               setGigs(gigs.filter(gig => gig.id !== gigId));
               Alert.alert('Success', 'Gig has been rejected');
             } catch (error) {
@@ -75,7 +76,9 @@ const ApproveGigsScreen = () => {
     <View style={styles.gigCard}>
       <View style={styles.gigHeader}>
         <Text style={styles.gigTitle}>{item.title}</Text>
-        <Text style={styles.gigPrice}>${item.price}</Text>
+        <Text style={styles.gigPrice}>
+          {item.currency ? `${item.currency} ${item.price ?? item.budget ?? '—'}` : (item.price ?? item.budget ?? '—')}
+        </Text>
       </View>
 
       <Text style={styles.gigDescription} numberOfLines={3}>
@@ -84,12 +87,12 @@ const ApproveGigsScreen = () => {
 
       <View style={styles.providerInfo}>
         <Icon name="person" size={16} color="#666666" />
-        <Text style={styles.providerName}>{item.providerName}</Text>
+        <Text style={styles.providerName}>{item.provider?.name || item.provider_name || item.providerName || 'Provider'}</Text>
       </View>
 
       <View style={styles.details}>
         <Text style={styles.detailText}>
-          <Icon name="schedule" size={16} color="#666666" /> {item.duration}
+          <Icon name="schedule" size={16} color="#666666" /> {item.duration || item.duration_label || item.deadline_display || 'Flexible'}
         </Text>
         <Text style={styles.detailText}>
           <Icon name="category" size={16} color="#666666" /> {item.category}

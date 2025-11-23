@@ -40,10 +40,47 @@ export const enableTestAuth = async (uid = 'firebase-uid-admin1', role = 'admin'
   await _setLocal('dev_test_role', role);
 };
 
+export const ensureTestAuth = async (uid, role) => {
+  const shouldEnable = async () => {
+    if (AsyncStorage) {
+      const enabled = await AsyncStorage.getItem('use_test_tokens');
+      const currentUid = await AsyncStorage.getItem('dev_test_uid');
+      const currentRole = await AsyncStorage.getItem('dev_test_role');
+      return enabled !== 'true' || currentUid !== uid || currentRole !== role;
+    }
+    if (typeof window !== 'undefined') {
+      const enabled = window.localStorage.getItem('use_test_tokens');
+      const currentUid = window.localStorage.getItem('dev_test_uid');
+      const currentRole = window.localStorage.getItem('dev_test_role');
+      return enabled !== 'true' || currentUid !== uid || currentRole !== role;
+    }
+    return false;
+  };
+
+  if (await shouldEnable()) {
+    await enableTestAuth(uid, role);
+  }
+};
+
 export const disableTestAuth = async () => {
   await _setLocal('use_test_tokens', 'false');
   await _setLocal('dev_test_uid', '');
   await _setLocal('dev_test_role', '');
+};
+
+export const isTestAuthEnabled = async () => {
+  try {
+    if (AsyncStorage) {
+      const enabled = await AsyncStorage.getItem('use_test_tokens');
+      return enabled === 'true';
+    }
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem('use_test_tokens') === 'true';
+    }
+  } catch (e) {
+    // ignore and fall through to false
+  }
+  return false;
 };
 
 export const getDevAuthHeader = () => {
@@ -73,5 +110,7 @@ export const getDevAuthHeader = () => {
 export default {
   enableTestAuth,
   disableTestAuth,
+  ensureTestAuth,
   getDevAuthHeader,
+  isTestAuthEnabled,
 };
