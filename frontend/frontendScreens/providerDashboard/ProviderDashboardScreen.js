@@ -16,12 +16,15 @@ import { ensureTestAuth } from '../../services/devAuth';
 import { getSharedEventStream } from '../../services/eventStream';
 import { pushToast } from '../../services/toastStore';
 
+const AVATAR_PLACEHOLDER = 'https://placehold.co/64x64/0b72b9/ffffff?text=P';
+
 export default function ProviderDashboardScreen() {
   const navigation = useNavigation();
   const [routes, setRoutes] = useState([]);
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [provider, setProvider] = useState(null);
   const [metrics, setMetrics] = useState({
     open: 0,
     pendingApproval: 0,

@@ -206,6 +206,8 @@ const studentApi = {
 // Provider API calls
 const providerApi = {
   getDashboard: () => api.get('/auth/me'),
+  getProfile: () => api.get('/auth/me'),
+  updateProfile: (data) => api.put('/users/profile', data),
   getGigs: (params) => api.get('/gigs/my-gigs', { params }),
   createGig: (data) => api.post('/gigs', data),
   updateGig: (gigId, data) => api.put(`/gigs/${gigId}`, data),

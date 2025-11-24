@@ -1,16 +1,22 @@
 // frontendScreens/providerDashboard/ProfileScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import HeaderBack from '../../components/HeaderBack';
 import { pickFile, MAX_FILE_SIZE } from '../../components/FilePicker';
 import api, { providerApi } from '../../services/api';
+import { ensureTestAuth } from '../../services/devAuth';
+
+const DEV_TEST_AUTH_ENABLED =
+  (typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true';
+const PROFILE_PLACEHOLDER = 'https://placehold.co/90x90/0077cc/ffffff?text=P';
 
 export default function ProfileScreen() {
-  const [name, setName] = useState('Eric Nkurunziza');
-  const [email, setEmail] = useState('eric@skillsync.org');
-  const [location, setLocation] = useState('Kigali, Rwanda');
-  const [phone, setPhone] = useState('+250 788 123 456');
-  const [bio, setBio] = useState('Freelance web developer passionate about youth empowerment and digital inclusion.');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [location, setLocation] = useState('');
+  const [phone, setPhone] = useState('');
+  const [bio, setBio] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState(null);
 
   // Identity docs
   const [passportUrl, setPassportUrl] = useState('');
@@ -18,22 +24,57 @@ export default function ProfileScreen() {
   const [driverLicenseUrl, setDriverLicenseUrl] = useState('');
   const [companyLicenseUrl, setCompanyLicenseUrl] = useState('');
 
-  const handleSave = async () => {
+  useEffect(() => {
+    let active = true;
+    const fetchProfile = async () => {
+      try {
+        if (DEV_TEST_AUTH_ENABLED) {
+          await ensureTestAuth('firebase-uid-provider1', 'provider');
+        }
+        const response = providerApi?.getProfile
+          ? await providerApi.getProfile()
+          : await providerApi.getDashboard();
+        const data = response?.data || response;
+        if (!active || !data) {
+          return;
+        }
+        setName(data.name || '');
+        setEmail(data.email || '');
+        setLocation(data.location || '');
+        setBio(data.bio || '');
+        setProfilePhoto(data.profile_photo || null);
+      } catch (err) {
+        console.error('Failed to load provider profile', err);
+      }
+    };
+    fetchProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleSave = useCallback(async () => {
     try {
-      // Save basic profile fields (and any uploaded doc urls)
-      const payload = { name, email, phone, location, bio, passportUrl, nationalIdUrl, driverLicenseUrl, companyLicenseUrl };
-      // Try providerApi.updateProfile if available, otherwise call generic patch
+      const payload = {
+        name: name?.trim() ?? '',
+        location: location?.trim() ?? '',
+        bio: bio?.trim() ?? '',
+      };
       if (providerApi && providerApi.updateProfile) {
-        await providerApi.updateProfile(payload);
+        const response = await providerApi.updateProfile(payload);
+        const data = response?.data || response;
+        if (data?.profile_photo) {
+          setProfilePhoto(data.profile_photo);
+        }
       } else {
-        await api.patch('/users/profile', payload);
+        await api.put('/users/profile', payload);
       }
       Alert.alert('Success', 'Profile updated!');
     } catch (err) {
       console.error('Save profile failed', err);
       Alert.alert('Error', 'Failed to save profile');
     }
-  };
+  }, [name, location, bio]);
 
   const uploadAndSave = async (docKey, setter) => {
     try {
@@ -69,7 +110,7 @@ export default function ProfileScreen() {
       if (providerApi && providerApi.updateProfile) {
         await providerApi.updateProfile(updatePayload);
       } else {
-        await api.patch('/users/profile', updatePayload);
+        await api.put('/users/profile', updatePayload);
       }
       Alert.alert('Uploaded', 'Document uploaded successfully and saved to your profile.');
     } catch (err) {
@@ -86,10 +127,10 @@ export default function ProfileScreen() {
 
         <View style={styles.avatarContainer}>
           <Image
-            source={{ uri: 'https://placehold.co/90x90/0077cc/ffffff?text=P' }}
+            source={{ uri: profilePhoto || PROFILE_PLACEHOLDER }}
             style={styles.avatar}
           />
-          <Text style={styles.avatarLabel}>Provider</Text>
+          <Text style={styles.avatarLabel}>{name || 'Provider'}</Text>
         </View>
 
         <TextInput
