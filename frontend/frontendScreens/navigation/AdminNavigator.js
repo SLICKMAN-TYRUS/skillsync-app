@@ -4,6 +4,7 @@ import AdminDashboardScreen from '../adminDashboard/AdminDashboard';
 import ApproveGigsScreen from '../../screens/admin/ApproveGigsScreen';
 import UserManagementScreen from '../../screens/admin/UserManagementScreen';
 import SystemLogsScreen from '../../screens/admin/SystemLogsScreen';
+import AdminDirectMessageScreen from '../../screens/admin/AdminDirectMessageScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -14,6 +15,7 @@ export default function AdminNavigator() {
       <Stack.Screen name="ApproveGigs" component={ApproveGigsScreen} />
       <Stack.Screen name="UserManagement" component={UserManagementScreen} />
       <Stack.Screen name="SystemLogs" component={SystemLogsScreen} />
+      <Stack.Screen name="AdminDirectMessage" component={AdminDirectMessageScreen} options={{ title: 'Direct Message' }} />
     </Stack.Navigator>
   );
 }

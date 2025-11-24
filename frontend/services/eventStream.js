@@ -1,3 +1,5 @@
+import { getDevAuthHeader } from './devAuth';
+
 const DEFAULT_ENDPOINT = '/api/notifications/stream';
 
 export default class EventStreamClient {
@@ -12,10 +14,21 @@ export default class EventStreamClient {
     if (this.eventSource) {
       return;
     }
-    const authToken = typeof window !== 'undefined' ? window.localStorage.getItem('auth_token') : null;
     const url = new URL(this.endpoint, window.location.origin);
-    if (authToken) {
-      url.searchParams.set('access_token', authToken);
+
+    let token = null;
+    if (typeof window !== 'undefined') {
+      token = window.localStorage.getItem('auth_token');
+      if (!token) {
+        const devHeader = getDevAuthHeader ? getDevAuthHeader() : null;
+        if (devHeader && devHeader.startsWith('Bearer ')) {
+          token = devHeader.slice('Bearer '.length);
+        }
+      }
+    }
+
+    if (token) {
+      url.searchParams.set('access_token', token);
     }
 
     const source = new EventSource(url.toString(), { withCredentials: true });

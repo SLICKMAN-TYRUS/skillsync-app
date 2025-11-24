@@ -216,18 +216,43 @@ const providerApi = {
   getRatings: () => api.get('/ratings'),
 };
 
+const ratingApi = {
+  create: (data) => api.post('/ratings', data),
+  listForUser: (userId) => api.get(`/ratings/user/${userId}`),
+  getAnalytics: (userId) => api.get(`/ratings/user/${userId}/analytics`),
+  getRateable: () => api.get('/ratings/rateable'),
+};
+
+const chatApi = {
+  listConversations: () => api.get('/chat/conversations'),
+  createConversation: (payload) => api.post('/chat/conversations', payload),
+  getConversation: (conversationId) => api.get(`/chat/conversations/${conversationId}`),
+  fetchMessages: (conversationId, params) =>
+    api.get(`/chat/conversations/${conversationId}/messages`, { params }),
+  postMessage: (conversationId, data) =>
+    api.post(`/chat/conversations/${conversationId}/messages`, data),
+  markRead: (conversationId) => api.post(`/chat/conversations/${conversationId}/read`),
+};
+
 // Admin API calls
 const adminApi = {
   getDashboard: () => api.get('/admin/analytics/overview'),
   getPendingGigs: () => api.get('/admin/gigs/pending'),
+  getGigDetail: (gigId) => api.get(`/admin/gigs/${gigId}`),
   approveGig: (gigId) => api.patch(`/admin/gigs/${gigId}/approve`),
-  rejectGig: (gigId) => api.patch(`/admin/gigs/${gigId}/reject`),
+  rejectGig: (gigId, reason) => api.patch(`/admin/gigs/${gigId}/reject`, reason ? { reason } : undefined),
   getUsers: (params) => api.get('/admin/users', { params }),
   updateUserStatus: (userId, data) =>
     api.patch(`/admin/users/${userId}/status`, data),
   updateUserRole: (userId, data) =>
     api.patch(`/admin/users/${userId}/role`, data),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
   getSystemLogs: (params) => api.get('/admin/audit-logs', { params }),
+  getGigAnalytics: () => api.get('/admin/analytics/gigs'),
+  getUserAnalytics: () => api.get('/admin/analytics/users'),
+  getPlatformHealth: () => api.get('/admin/analytics/health'),
+  getRevenueAnalytics: () => api.get('/admin/analytics/revenue'),
+  getEngagementAnalytics: () => api.get('/admin/analytics/engagement'),
 };
 
 // Development helpers (routes & locations) used by frontend screens when backend is not available
@@ -257,6 +282,8 @@ export {
   studentApi,
   providerApi,
   adminApi,
+  ratingApi,
+  chatApi,
   fetchRoutes,
   fetchLocations,
 };

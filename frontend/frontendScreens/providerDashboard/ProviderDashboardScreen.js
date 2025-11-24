@@ -178,22 +178,33 @@ export default function ProviderDashboardScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
           <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: '#EAF6FF' }]}>
-            <Icon name="work" size={28} color="#0b72b9" />
-            <Text style={styles.statValue}>{metrics.open}</Text>
-            <Text style={styles.statLabel}>Open & Approved</Text>
+            <View style={[styles.statCard, { backgroundColor: '#EAF6FF' }]}>
+              <Icon name="work" size={28} color="#0b72b9" />
+              <Text style={styles.statValue}>{metrics.open}</Text>
+              <Text style={styles.statLabel}>Open & Approved</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: '#FFF5EB' }]}>
+              <Icon name="group" size={28} color="#ff8a00" />
+              <Text style={styles.statValue}>{metrics.applicants}</Text>
+              <Text style={styles.statLabel}>Total Applicants</Text>
+            </View>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#FFF5EB' }]}>
-            <Icon name="group" size={28} color="#ff8a00" />
-            <Text style={styles.statValue}>{metrics.applicants}</Text>
-            <Text style={styles.statLabel}>Total Applicants</Text>
-          </View>
-          <TouchableOpacity style={[styles.statCard, { backgroundColor: '#FFF7FF' }]} onPress={() => navigation.navigate('ManageGigs')}>
-            <Icon name="assignment" size={28} color="#8c4bd6" />
-            <Text style={styles.statValue}>{metrics.pendingApproval}</Text>
-            <Text style={styles.statLabel}>Pending Approval</Text>
+
+          <TouchableOpacity style={styles.managementCard} onPress={() => navigation.navigate('ManageGigs')}>
+            <View style={styles.managementIconWrap}>
+              <Icon name="dashboard" size={28} color="#fff" />
+            </View>
+            <View style={{ flex: 1, marginHorizontal: 14 }}>
+              <Text style={styles.managementTitle}>Gig Management</Text>
+              <Text style={styles.managementSubtitle}>
+                Review approvals, monitor statuses, and prune outdated gigs in one place.
+              </Text>
+            </View>
+            <View style={styles.managementBadge}>
+              <Text style={styles.managementBadgeText}>{metrics.pendingApproval}</Text>
+              <Text style={styles.managementBadgeHint}>pending</Text>
+            </View>
           </TouchableOpacity>
-        </View>
 
         <Text style={styles.sectionTitle}>Your Gigs</Text>
         {error ? <Text style={{ color: '#c53030', marginBottom: 12 }}>{error}</Text> : null}
@@ -288,10 +299,44 @@ const styles = StyleSheet.create({
   headerAction: { padding: 8 },
 
   container: { padding: 18, paddingBottom: 120 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 18 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   statCard: { flex: 1, marginHorizontal: 6, borderRadius: 12, padding: 14, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
   statValue: { fontSize: 18, fontWeight: '800', marginTop: 8, color: '#083b66' },
   statLabel: { fontSize: 12, color: '#556270' },
+
+  managementCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0b72b9',
+    borderRadius: 16,
+    padding: 18,
+    marginHorizontal: 6,
+    marginBottom: 20,
+    shadowColor: '#0b72b9',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  managementIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#0a5ea1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  managementTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  managementSubtitle: { color: '#D1E9FF', fontSize: 12, marginTop: 6, lineHeight: 18 },
+  managementBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0a5ea1',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  managementBadgeText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  managementBadgeHint: { color: '#D1E9FF', fontSize: 11, textTransform: 'uppercase', marginTop: 2, letterSpacing: 1 },
 
   sectionTitle: { fontSize: 16, fontWeight: '800', marginVertical: 14, color: '#2b3944' },
 

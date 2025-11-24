@@ -1,4 +1,4 @@
-import { collection, getDocs, getDoc, doc, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, query, where, orderBy, setDoc } from 'firebase/firestore';
 import { firestore } from './firebaseConfig';
 
 // Map Firestore gig document to frontend shape
@@ -57,6 +57,14 @@ export async function fetchUserProfile(uid) {
   };
 }
 
+export async function saveUserProfile(uid, data) {
+  if (!uid) {
+    throw new Error('A user uid is required to save profile data');
+  }
+  await setDoc(doc(firestore, 'users', uid), data, { merge: true });
+  return data;
+}
+
 export async function fetchGigsByProvider(providerUid) {
   const col = collection(firestore, 'gigs');
   const q = query(col, where('providerUid', '==', providerUid), orderBy('createdAt', 'desc'));
@@ -90,4 +98,5 @@ export default {
   fetchGigs,
   fetchGigById,
   fetchUserProfile,
+  saveUserProfile,
 };

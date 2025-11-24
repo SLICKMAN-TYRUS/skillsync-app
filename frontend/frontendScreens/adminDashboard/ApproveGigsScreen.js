@@ -14,11 +14,12 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import api from '../../services/api';
+import { adminApi } from '../../services/api';
 import { ensureTestAuth } from '../../services/devAuth';
 import firestoreAdapter from '../../services/firestoreAdapter';
 import { pushToast } from '../../services/toastStore';
 import { getSharedEventStream } from '../../services/eventStream';
+import HeaderBack from '../../components/HeaderBack';
 
 const ApproveGigsScreen = () => {
   const [gigs, setGigs] = useState([]);
@@ -66,7 +67,7 @@ const ApproveGigsScreen = () => {
       if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
         await ensureTestAuth('firebase-uid-admin1', 'admin');
       }
-      const response = await api.get('/admin/gigs/pending');
+      const response = await adminApi.getPendingGigs();
       const payload = Array.isArray(response.data) ? response.data : [];
       if (!mountedRef.current) {
         return;
@@ -102,7 +103,7 @@ const ApproveGigsScreen = () => {
       if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
         await ensureTestAuth('firebase-uid-admin1', 'admin');
       }
-      const response = await api.get(`/admin/gigs/${gigId}`);
+      const response = await adminApi.getGigDetail(gigId);
       if (!mountedRef.current) {
         return;
       }
@@ -170,7 +171,7 @@ const ApproveGigsScreen = () => {
       if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
         await ensureTestAuth('firebase-uid-admin1', 'admin');
       }
-      await api.patch(`/admin/gigs/${gigId}/approve`);
+      await adminApi.approveGig(gigId);
       setGigs((prev) => prev.filter((gig) => gig.id !== gigId));
       closeGigDetails();
       pushToast({ type: 'success', message: 'Gig approved successfully.' });
@@ -180,44 +181,56 @@ const ApproveGigsScreen = () => {
     }
   };
 
-  const handleReject = async (gigId) => {
-    const rejectGig = async () => {
+  const handleReject = (gigId) => {
+    const defaultReason = 'Rejected by administrator';
+
+    const performReject = async (reasonLabel) => {
+      const reason = (reasonLabel || '').trim() || defaultReason;
       try {
-        if (((typeof __DEV__ !== 'undefined' && __DEV__) || process?.env?.ALLOW_DEV_TOKENS === 'true')) {
+        if (
+          (typeof __DEV__ !== 'undefined' && __DEV__) ||
+          process?.env?.ALLOW_DEV_TOKENS === 'true'
+        ) {
           await ensureTestAuth('firebase-uid-admin1', 'admin');
         }
-        await api.patch(`/admin/gigs/${gigId}/reject`, { reason: 'Rejected by admin' });
+        await adminApi.rejectGig(gigId, reason);
         setGigs((prev) => prev.filter((gig) => gig.id !== gigId));
         closeGigDetails();
-        pushToast({ type: 'warning', message: 'Gig rejected.' });
+        pushToast({ type: 'warning', message: `Gig rejected: ${reason}.` });
         Alert.alert('Success', 'Gig has been rejected');
       } catch (error) {
         Alert.alert('Error', 'Failed to reject gig');
       }
     };
 
-    const confirmationMessage = 'Are you sure you want to reject this gig?';
-
     if (Platform.OS === 'web') {
-      const confirmed = typeof window !== 'undefined' ? window.confirm(confirmationMessage) : false;
-      if (confirmed) {
-        await rejectGig();
+      const reason = typeof window !== 'undefined'
+        ? window.prompt('Enter a reason to send to the provider:', 'Needs additional details')
+        : null;
+      if (reason === null) {
+        return;
       }
+      performReject(reason);
       return;
     }
 
     Alert.alert(
       'Reject Gig',
-      confirmationMessage,
+      'Choose a reason to notify the provider.',
       [
-        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: () => {
-            rejectGig();
-          },
+          text: 'Missing details',
+          onPress: () => performReject('Missing required information'),
         },
+        {
+          text: 'Pricing concern',
+          onPress: () => performReject('Pricing not aligned with expectations'),
+        },
+        {
+          text: 'Out of scope',
+          onPress: () => performReject('Gig is outside SkillSync scope'),
+        },
+        { text: 'Cancel', style: 'cancel' },
       ],
     );
   };
@@ -337,6 +350,7 @@ const ApproveGigsScreen = () => {
 
   return (
     <View style={styles.container}>
+      <HeaderBack title="Approve Gigs" backTo="AdminDashboard" />
       <FlatList
         data={gigs}
         renderItem={renderGigItem}
